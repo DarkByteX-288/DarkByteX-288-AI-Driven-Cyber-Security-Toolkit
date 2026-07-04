@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Settings - {{ app_name }}{% endblock %}
+{% block content %}
+
+<h3 class="mb-4"><i class="fa-solid fa-gear"></i> Settings</h3>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="cyber-card">
+            <h6 class="mb-3"><i class="fa-solid fa-palette"></i> Appearance</h6>
+            <form method="POST" action="{{ url_for('settings.update_theme') }}">
+                <div class="btn-group w-100" role="group">
+                    <button type="submit" name="theme" value="dark" class="btn {{ 'btn-cyber' if user_settings.theme == 'dark' else 'btn-cyber-outline' }}">
+                        <i class="fa-solid fa-moon"></i> Dark Mode
+                    </button>
+                    <button type="submit" name="theme" value="light" class="btn {{ 'btn-cyber' if user_settings.theme == 'light' else 'btn-cyber-outline' }}">
+                        <i class="fa-solid fa-sun"></i> Light Mode
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="cyber-card">
+            <h6 class="mb-3"><i class="fa-solid fa-download"></i> Export Data</h6>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('reports.password_csv') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-csv"></i> Password CSV</a>
+                <a href="{{ url_for('reports.url_csv') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-csv"></i> URL CSV</a>
+                <a href="{{ url_for('reports.security_pdf') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-pdf"></i> Security PDF</a>
+            </div>
+        </div>
+
+        <div class="cyber-card">
+            <h6 class="mb-3 text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h6>
+            <form method="POST" action="{{ url_for('settings.clear_history') }}" onsubmit="return confirm('This will permanently delete all your analysis history. Continue?');">
+                <button type="submit" class="btn btn-outline-danger w-100"><i class="fa-solid fa-trash"></i> Clear My History</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="cyber-card">
+            <h6 class="mb-3"><i class="fa-solid fa-brain"></i> AI Model Management</h6>
+            <form method="POST" action="{{ url_for('settings.retrain_models') }}">
+                <div class="mb-3">
+                    <select name="target" class="form-select">
+                        <option value="both">Both Models</option>
+                        <option value="password">Password Model Only</option>
+                        <option value="url">URL Model Only</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-cyber w-100" data-no-spinner>
+                    <i class="fa-solid fa-arrows-rotate"></i> Retrain AI Models
+                </button>
+                <small class="d-block mt-2" style="color: var(--text-secondary);">
+                    Regenerates the training dataset and retrains the RandomForest model(s). This may take a few seconds.
+                </small>
+            </form>
+        </div>
+
+        <div class="cyber-card">
+            <h6 class="mb-3"><i class="fa-solid fa-database"></i> Database Information</h6>
+            <table class="table table-cyber table-sm mb-0">
+                <tr><th>Engine</th><td>{{ db_info.engine }}</td></tr>
+                <tr><th>File</th><td class="text-truncate" style="max-width:220px;">{{ db_info.path }}</td></tr>
+                <tr><th>Size</th><td>{{ db_info.size_kb }} KB</td></tr>
+                <tr><th>Total Users</th><td>{{ db_info.total_users }}</td></tr>
+            </table>
+        </div>
+
+        <div class="cyber-card">
+            <h6 class="mb-3"><i class="fa-solid fa-circle-info"></i> Application Information</h6>
+            <table class="table table-cyber table-sm mb-0">
+                <tr><th>Name</th><td>{{ app_info.name }}</td></tr>
+                <tr><th>Version</th><td>{{ app_info.version }}</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

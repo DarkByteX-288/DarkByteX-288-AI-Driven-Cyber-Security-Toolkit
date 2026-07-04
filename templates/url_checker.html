@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}URL Checker - {{ app_name }}{% endblock %}
+{% block content %}
+
+<h3 class="mb-4"><i class="fa-solid fa-link"></i> AI Phishing URL Detection</h3>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="cyber-card">
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.url.label(class="form-label") }}
+                    {{ form.url(class="form-control", placeholder="https://example.com", autofocus=true) }}
+                    {% for error in form.url.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {{ form.submit(class="btn btn-cyber w-100") }}
+            </form>
+            <p class="mt-3 mb-0 small" style="color: var(--text-secondary);">
+                <i class="fa-solid fa-info-circle"></i> Analysis is purely structural/lexical - we never visit the URL.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        {% if result %}
+
+        {% if result.verdict_key == "phishing" %}
+        <div class="alert alert-danger cyber-alert mb-3">
+            <i class="fa-solid fa-triangle-exclamation"></i> <strong>Warning:</strong> This URL shows strong indicators of phishing. Do not enter any credentials or personal information.
+        </div>
+        {% endif %}
+
+        <div class="cyber-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Analysis Result</h5>
+                <span class="badge badge-cyber" style="background: {{ 'rgba(239,68,68,0.15); color: var(--accent-red)' if result.verdict_key == 'phishing' else ('rgba(247,169,52,0.15); color: var(--accent-orange)' if result.verdict_key == 'suspicious' else 'rgba(33,201,138,0.15); color: var(--accent-green)') }};">
+                    {{ result.verdict }}
+                </span>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-6">
+                    <p class="mb-1"><strong>Confidence:</strong> {{ result.confidence }}%</p>
+                    <p class="mb-1"><strong>Threat Level:</strong> {{ result.threat_level }}</p>
+                </div>
+                <div class="col-6">
+                    <p class="mb-1"><strong>HTTPS:</strong> {{ "Yes" if result.features.uses_https else "No" }}</p>
+                    <p class="mb-1"><strong>Domain:</strong> {{ result.features.domain }}</p>
+                </div>
+            </div>
+
+            <div class="risk-meter mb-4">
+                <div class="risk-meter-fill" style="width: {{ result.confidence }}%; background: {{ '#ef4444' if result.verdict_key == 'phishing' else ('#f7a934' if result.verdict_key == 'suspicious' else '#21c98a') }};"></div>
+            </div>
+
+            <h6><i class="fa-solid fa-magnifying-glass"></i> Structural Indicators</h6>
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                {% for label, flag in [
+                    ("IP Address Host", result.features.has_ip_address),
+                    ("'@' Symbol", result.features.has_at_symbol),
+                    ("Embedded Redirect", result.features.has_double_slash_redirect),
+                    ("URL Shortener", result.features.is_shortened),
+                    ("Suspicious Keywords", result.features.has_suspicious_keywords),
+                    ("Excess Subdomains", result.features.subdomain_count >= 3)
+                ] %}
+                <span class="badge badge-cyber" style="background: {{ 'rgba(239,68,68,0.15); color: var(--accent-red)' if flag else 'rgba(33,201,138,0.15); color: var(--accent-green)' }};">
+                    <i class="fa-solid {{ 'fa-triangle-exclamation' if flag else 'fa-check' }}"></i> {{ label }}
+                </span>
+                {% endfor %}
+            </div>
+
+            <h6><i class="fa-solid fa-list-check"></i> Reasons</h6>
+            <ul class="mb-4">
+                {% for reason in result.reasons %}
+                <li style="color: var(--text-secondary);">{{ reason }}</li>
+                {% endfor %}
+            </ul>
+
+            <h6><i class="fa-solid fa-lightbulb"></i> Recommendations</h6>
+            <ul class="mb-0">
+                {% for rec in result.recommendations %}
+                <li style="color: var(--text-secondary);">{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% else %}
+        <div class="cyber-card text-center d-flex flex-column justify-content-center" style="min-height: 300px;">
+            <i class="fa-solid fa-globe feature-icon-lg"></i>
+            <p style="color: var(--text-secondary);">Enter a URL on the left to run a full phishing risk analysis.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

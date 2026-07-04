@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}History - {{ app_name }}{% endblock %}
+{% block content %}
+
+<h3 class="mb-4"><i class="fa-solid fa-clock-rotate-left"></i> Analysis History</h3>
+
+<ul class="nav nav-tabs mb-4" style="border-color: var(--border-color);">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if tab == 'password' else '' }}" href="{{ url_for('history.history', tab='password') }}">
+            <i class="fa-solid fa-key"></i> Password Analyses
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if tab == 'url' else '' }}" href="{{ url_for('history.history', tab='url') }}">
+            <i class="fa-solid fa-link"></i> URL Analyses
+        </a>
+    </li>
+</ul>
+
+{% if tab == 'password' %}
+<div class="cyber-card">
+    <form method="GET" class="row g-2 mb-3">
+        <input type="hidden" name="tab" value="password">
+        <div class="col-md-4">
+            <select name="category" class="form-select" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for cat in ["Very Weak", "Weak", "Moderate", "Strong", "Very Strong"] %}
+                <option value="{{ cat }}" {{ 'selected' if category_filter == cat else '' }}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <a href="{{ url_for('reports.password_csv') }}" class="btn btn-cyber-outline w-100"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-cyber table-sm align-middle">
+            <thead><tr><th>Date</th><th>Length</th><th>Entropy</th><th>Category</th><th>Score</th><th>Crack Time</th><th></th></tr></thead>
+            <tbody>
+                {% for a in pwd_analyses %}
+                <tr>
+                    <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ a.password_length }}</td>
+                    <td>{{ a.entropy }}</td>
+                    <td>{{ a.strength_category }}</td>
+                    <td>{{ a.strength_score }}/100</td>
+                    <td>{{ a.estimated_crack_time_display or '—' }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('history.delete_password_analysis', analysis_id=a.id) }}" onsubmit="return confirm('Delete this analysis?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center" style="color: var(--text-secondary);">No password analyses found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if tab == 'url' %}
+<div class="cyber-card">
+    <form method="GET" class="row g-2 mb-3">
+        <input type="hidden" name="tab" value="url">
+        <div class="col-md-4">
+            <input type="text" name="q" class="form-control" placeholder="Search by URL..." value="{{ query }}">
+        </div>
+        <div class="col-md-3">
+            <select name="category" class="form-select">
+                <option value="">All Verdicts</option>
+                {% for v in ["Safe", "Suspicious", "Phishing"] %}
+                <option value="{{ v }}" {{ 'selected' if category_filter == v else '' }}>{{ v }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-cyber w-100" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Filter</button>
+        </div>
+        <div class="col-md-3">
+            <a href="{{ url_for('reports.url_csv') }}" class="btn btn-cyber-outline w-100"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-cyber table-sm align-middle">
+            <thead><tr><th>Date</th><th>URL</th><th>Verdict</th><th>Confidence</th><th>Threat</th><th></th></tr></thead>
+            <tbody>
+                {% for a in url_analyses %}
+                <tr>
+                    <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="text-truncate" style="max-width: 260px;">{{ a.url }}</td>
+                    <td>{{ a.verdict }}</td>
+                    <td>{{ a.confidence }}%</td>
+                    <td>{{ a.threat_level }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('history.delete_url_analysis', analysis_id=a.id) }}" onsubmit="return confirm('Delete this analysis?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center" style="color: var(--text-secondary);">No URL analyses found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

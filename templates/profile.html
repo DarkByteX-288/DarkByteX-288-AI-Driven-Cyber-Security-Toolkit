@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Profile - {{ app_name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="cyber-card">
+            <div class="text-center mb-3">
+                <i class="fa-solid fa-user-shield" style="font-size: 3rem; color: var(--accent-cyan);"></i>
+                <h4 class="mt-2">{{ user.username }}</h4>
+                <p style="color: var(--text-secondary);">{{ user.email }}</p>
+            </div>
+            <table class="table table-cyber">
+                <tr><th>Account Created</th><td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+                <tr><th>Last Login</th><td>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M') if user.last_login_at else '—' }}</td></tr>
+                <tr><th>Password Analyses</th><td>{{ user.password_analyses.count() }}</td></tr>
+                <tr><th>URL Analyses</th><td>{{ user.url_analyses.count() }}</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

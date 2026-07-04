@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} - Home{% endblock %}
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title mb-3"><i class="fa-solid fa-shield-halved"></i> {{ app_name }}</h1>
+    <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
+        AI-driven password strength evaluation, phishing URL detection, attack simulation,
+        and adaptive defense - all in one modern security dashboard.
+    </p>
+    <div class="mt-4">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-cyber btn-lg"><i class="fa-solid fa-gauge-high"></i> Go to Dashboard</a>
+        {% else %}
+        <a href="{{ url_for('auth.register') }}" class="btn btn-cyber btn-lg me-2"><i class="fa-solid fa-user-plus"></i> Get Started</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-cyber-outline btn-lg"><i class="fa-solid fa-right-to-bracket"></i> Sign In</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-md-4">
+        <div class="cyber-card text-center h-100">
+            <div class="feature-icon-lg"><i class="fa-solid fa-key"></i></div>
+            <h5>Password Strength AI</h5>
+            <p style="color: var(--text-secondary);">Entropy, pattern recognition, dictionary detection, and machine-learning based scoring with actionable recommendations.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="cyber-card text-center h-100">
+            <div class="feature-icon-lg"><i class="fa-solid fa-link"></i></div>
+            <h5>Phishing URL Detection</h5>
+            <p style="color: var(--text-secondary);">Structural and lexical analysis of URLs to flag suspicious or malicious links before you click.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="cyber-card text-center h-100">
+            <div class="feature-icon-lg"><i class="fa-solid fa-crosshairs"></i></div>
+            <h5>Attack Simulation</h5>
+            <p style="color: var(--text-secondary);">Simulated dictionary, brute-force, hybrid, and pattern attacks estimate real-world crack times.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
