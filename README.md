@@ -30,6 +30,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements-lock.txt
+Copy-Item .env.example .env
 ```
 
 On Unix-like shells, activate with `source .venv/bin/activate`.
@@ -49,13 +50,27 @@ Loopback is rejected by default. For a disposable local-only verification enviro
 
 ### Configure and migrate the database
 
-Set a unique, random `SECRET_KEY` for production. The scanner defaults to RFC1918 IPv4 and IPv6 unique-local ranges only. To narrow or extend asset scope, set `BASTIONIX_APPROVED_NETWORKS` to a comma-separated list of strict CIDRs that the deployment owner is authorized to assess. Public ranges are never included by default. Scanner limits can be adjusted with `BASTIONIX_SCANNER_MAX_HOSTS`, `BASTIONIX_SCANNER_MAX_ACTIVE`, and `BASTIONIX_SCANNER_WORKERS`; host count is capped at 256.
+Copy `.env.example` to `.env` for local development. The example uses `FLASK_ENV=development`; the app generates an ephemeral, unpredictable development key if `SECRET_KEY` is blank. The app defaults to production when no environment is selected. Production startup requires `FLASK_ENV=production` and an environment-provided random `SECRET_KEY` of at least 32 characters; there is no production fallback.
+
+Generate a production key and set production configuration in PowerShell:
+
+```powershell
+$env:FLASK_ENV = "production"
+$env:SECRET_KEY = python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Keep the key in the deployment's secret manager, not in source control. Use `flask run` only for local development; production must use a production WSGI server with debug disabled. The scanner defaults to RFC1918 IPv4 and IPv6 unique-local ranges only. To narrow or extend asset scope, set `BASTIONIX_APPROVED_NETWORKS` to a comma-separated list of strict CIDRs that the deployment owner is authorized to assess. Public ranges are never included by default. Scanner limits can be adjusted with `BASTIONIX_SCANNER_MAX_HOSTS`, `BASTIONIX_SCANNER_MAX_ACTIVE`, and `BASTIONIX_SCANNER_WORKERS`; host count is capped at 256.
 
 Apply migrations before starting the app:
 
 ```powershell
-$env:SECRET_KEY = "<generate-a-long-random-secret>"
 python -m flask db upgrade
+```
+
+For local development only:
+
+```powershell
+$env:FLASK_ENV = "development"
 python -m flask run
 ```
 
@@ -66,7 +81,8 @@ The checked-in existing SQLite database is upgraded additively; migrations prese
 ```powershell
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
-python -m pip_audit -r requirements.txt
+pip-audit -r requirements.txt
+pip-audit -r requirements-lock.txt
 ```
 
 Automated scanner tests use mocked Nmap/NVD data and do not initiate network scans. Run the tests on Python versions that the project claims to support before deploying.

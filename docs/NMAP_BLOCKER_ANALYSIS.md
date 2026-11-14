@@ -6,21 +6,23 @@ Inspection was performed before changing the scanner or installing Nmap.
 
 | Item | Observed state |
 |---|---|
-| Operating system | Windows 11 Pro, 64-bit |
-| Project Python | Python 3.11.7 in the existing `.venv` and `venv` directories |
+| Operating system | Windows 11 Pro, version 10.0.26200, 64-bit |
+| Project Python | Python 3.11.7; test/runtime venv is `.phase1-nmap-venv` |
 | `NMAP_PATH` | Unset |
 | `nmap` in PATH | Not found |
 | Common Windows install paths | `C:\Program Files\Nmap\nmap.exe`, `C:\Program Files (x86)\Nmap\nmap.exe`, and `C:\Nmap\nmap.exe` absent |
-| Python Nmap integration in existing environments | `import nmap` fails with `ModuleNotFoundError` |
+| Npcap | No service, registry key, or common installation directory found; not required for TCP connect scanning |
+| Python Nmap integration | `python-nmap` 0.7.1 imports in `.phase1-nmap-venv`; absent from `.venv` |
 | `py`, `python`, `winget` on PATH | Not available |
-| Local Git checkout | None at the workspace root or project directory |
-| Remote repository branch | GitHub `main`, observed head `52e5c6ec687fd142836e225ab9bb3d060bcaa2e6` |
+| Administrator permissions | Current account is not an administrator |
+| Local Git checkout | None at the workspace root or project directory; publication uses a clean clone |
+| Remote repository branch | GitHub `main`, observed head `e54d8ea15062b12aa83d5422812ff0ad02de5ef1` before this security update |
 
 ## Root cause
 
-The earlier verification established that the Python dependency declaration and mocked tests existed, but did not establish that the current application environment contained the Python integration module or an Nmap operating-system executable. The active project virtual environments have neither `python-nmap` installed nor an Nmap executable available to the process. The application also only searched `PATH` with `shutil.which("nmap")`; it had no `NMAP_PATH` override, version probe, or health endpoint.
+At the initial verification, the existing virtual environments lacked `python-nmap`, the Nmap operating-system executable was absent, and the application only searched `PATH` with `shutil.which("nmap")`; it had no `NMAP_PATH` override, version probe, or health endpoint. The adapter, override, discovery, version probe, and health endpoint have since been implemented. `python-nmap` is now present in the dedicated test environment, but the actual Nmap executable remains absent.
 
-There was a second independent blocker for the requested test: loopback targets were unconditionally rejected by target validation, regardless of explicit authorization and approved CIDRs. A test-only, opt-in loopback scope is required; normal scanner defaults must continue to reject loopback.
+There was a second independent blocker for the requested test: loopback targets were initially rejected regardless of explicit authorization and approved CIDRs. The implementation now has a default-off loopback opt-in requiring both authorization and an approved loopback CIDR; normal scanner defaults continue to reject loopback.
 
 The official Nmap installation guide documents the Windows self-installer. Windows loopback/raw packet support normally uses Npcap; the official guide documents `-sT -Pn` as a TCP-connect alternative when Npcap is not installed. No Npcap driver or Windows registry performance changes will be installed without an explicit need and transparent reporting.
 
@@ -32,6 +34,7 @@ The official Nmap installation guide documents the Windows self-installer. Windo
 - Authenticated `GET /api/scans/health` reports executable and integration state without returning the local executable path. User-facing scan errors do not include local paths or stack traces.
 - Loopback remains disallowed by default and requires both an explicit approved CIDR and `BASTIONIX_SCANNER_ALLOW_LOOPBACK=true`. Only loopback receives `-Pn`; all scans use explicit TCP connect mode `-sT`.
 - CVE matching uses the NVD 2.0 API, a process-local bounded cache, five-second request timeouts, CVSS version/score persistence, version-appropriate severity classification, and potential-only matching. Automated tests mock NVD; live enrichment is not necessary for a loopback host with no identified service.
+- An unset `FLASK_ENV` now selects production, which requires an environment-provided key at least 32 characters long. Known development/test keys and `FLASK_DEBUG` overrides are rejected in production. Development uses an ephemeral random key. `.env.example` replaces the tracked local Flask environment file.
 
 ## Resolution and verification record
 
@@ -41,7 +44,7 @@ A fresh Python 3.11.7 environment was created from `requirements-lock.txt` and `
 
 The actual scanner executable path, Nmap version, Python-to-executable invocation, loopback scan output, persisted live results, live history, and live reports remain **NOT VERIFIED** because Nmap could not be installed under the current account.
 
-The expanded test suite passed **97 tests**; compile, dependency consistency, dependency audits, and migration upgrade/downgrade/re-upgrade checks passed. These checks cover mocked scanner execution and do not substitute for the missing real Nmap scan.
+The expanded test suite previously passed **97 tests**; the final configuration-hardening regression suite now passes **103 tests**. Compile, dependency consistency, dependency audits, and migration upgrade/downgrade/re-upgrade checks passed. These checks cover mocked scanner execution and do not substitute for the missing real Nmap scan.
 
 ### Manual installation needed
 

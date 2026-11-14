@@ -8,12 +8,20 @@ __pycache__/
 .pytest_cache/
 instance/database.db
 *.db
+*.sqlite
+*.sqlite3
+*.sqlite3-*
 .env
 .env.*
 !.env.example
 .flaskenv
 *.log
 .DS_Store
+.coverage
+htmlcov/
+reports/generated/
+instance/reports/
+tmp/scans/
 
 # Generated URL training splits and evaluation outputs.
 datasets/url_detection_artifacts/

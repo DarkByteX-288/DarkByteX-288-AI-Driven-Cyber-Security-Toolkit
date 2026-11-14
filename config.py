@@ -7,6 +7,7 @@ Uses environment variables for deployment secrets and scanner scope.
 """
 
 import os
+import secrets
 
 from scanners.target_validation import parse_approved_networks
 
@@ -71,12 +72,13 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SECRET_KEY = os.environ.get("SECRET_KEY", "development-only-not-for-production")
+    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
     AUTO_CREATE_DB = False
 
 
 class ProductionConfig(Config):
     DEBUG = False
+    SECRET_KEY = os.environ.get("SECRET_KEY")
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
 

@@ -14,6 +14,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements-lock.txt
+Copy-Item .env.example .env
 ```
 
 ### Install the Nmap executable separately
@@ -37,15 +38,19 @@ Loopback remains disabled by default. Only for an isolated local verification da
 
 ## Configure and run
 
+Copy `.env.example` to `.env`. Without an explicit `FLASK_ENV`, BastionIX defaults to production and refuses to start without a strong environment-provided key. For local development, set `FLASK_ENV=development`; an ephemeral random key is used if no development key is supplied.
+
+Generate and set a production secret using the deployment's secret manager:
+
 ```powershell
-$env:SECRET_KEY = "<long-random-secret>"
+$env:FLASK_ENV = "production"
+$env:SECRET_KEY = python -c "import secrets; print(secrets.token_hex(32))"
 # Optional: replace private defaults with explicitly authorized asset CIDRs.
 $env:BASTIONIX_APPROVED_NETWORKS = "10.20.0.0/16,192.168.10.0/24"
 python -m flask db upgrade
-python -m flask run
 ```
 
-Use the secret-management mechanism of the deployment environment rather than storing credentials in `.flaskenv` or source control. `BASTIONIX_SCANNER_MAX_HOSTS` defaults to 64 and cannot exceed 256. Scanner worker and active-scan limits are configured with `BASTIONIX_SCANNER_WORKERS` and `BASTIONIX_SCANNER_MAX_ACTIVE`.
+Use `flask run` only for local development after setting `FLASK_ENV=development`; never use the Flask development server in production. Production has `DEBUG=False` and secure session cookies. `.env` and `.flaskenv` are local-only and ignored by Git; commit only the empty-value `.env.example`. `BASTIONIX_SCANNER_MAX_HOSTS` defaults to 64 and cannot exceed 256. Scanner worker and active-scan limits are configured with `BASTIONIX_SCANNER_WORKERS` and `BASTIONIX_SCANNER_MAX_ACTIVE`.
 
 The migration baseline is additive and idempotent for the current legacy schema. Back up existing `instance/database.db` before upgrading. Development no longer creates production schema changes implicitly; use migrations. Unit tests use a separate in-memory database.
 

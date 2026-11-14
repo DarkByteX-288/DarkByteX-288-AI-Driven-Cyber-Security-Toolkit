@@ -2,7 +2,7 @@
 
 ## Authentication and ownership
 
-Existing Flask-Login sessions and CSRF protection remain enabled. Production startup fails without `SECRET_KEY`; development and testing use environment-specific non-production secrets. The login redirect accepts local paths only. Logout is POST-only. Scanner APIs require authentication, explicit authorization confirmation, and scan ownership for status, findings, cancellation, and report access.
+Existing Flask-Login sessions and CSRF protection remain enabled. With no environment selected, startup defaults to production and fails closed unless the environment provides a non-placeholder `SECRET_KEY` at least 32 characters long. Production explicitly disables debug and enables secure session cookies. Development uses a per-process random key when no local key is configured; tests use a test-only key and in-memory database. The login redirect accepts local paths only. Logout is POST-only. Scanner APIs require authentication, explicit authorization confirmation, and scan ownership for status, findings, cancellation, and report access.
 
 ## Target and process controls
 
@@ -25,4 +25,4 @@ Scan creation, authorization, cancellation, completion, and failure events are p
 
 ## Deployment constraints and residual risks
 
-The built-in background executor, active-scan lock, and NVD cache are process-local. Multiple WSGI worker processes can race limits and do not share cancellation state; production multi-worker deployments require a shared queue and distributed coordination. The Flask-Limiter default backend remains in-memory unless `RATELIMIT_STORAGE_URI` is set to a shared supported backend. Put production behind TLS, use a hardened WSGI server and filesystem permissions, protect NVD credentials, and keep model pickle artifacts immutable and trusted. The existing model retraining operation is still synchronous and available to any authenticated user; it should be restricted or moved to an administrative task before multi-user production exposure.
+The built-in background executor, active-scan lock, and NVD cache are process-local. Multiple WSGI worker processes can race limits and do not share cancellation state; Production multi-worker deployments require a shared queue and distributed coordination. The Flask-Limiter default backend remains in-memory unless `RATELIMIT_STORAGE_URI` is set to a shared supported backend. Put production behind TLS, use a hardened WSGI server and filesystem permissions, protect NVD credentials, and keep model pickle artifacts immutable and trusted. The existing model retraining operation is still synchronous and available to any authenticated user; it should be restricted or moved to an administrative task before multi-user production exposure. Do not use the Flask development server or set `FLASK_DEBUG=1` in production.

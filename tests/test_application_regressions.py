@@ -159,10 +159,52 @@ def test_login_rejects_external_next_redirect(app, user):
 
 def test_production_requires_configured_secret(monkeypatch):
     from app import create_app
-    from config import ProductionConfig
 
-    monkeypatch.setattr(ProductionConfig, "SECRET_KEY", None)
+    monkeypatch.delenv("SECRET_KEY", raising=False)
     with pytest.raises(RuntimeError, match="SECRET_KEY"):
+        create_app("production")
+
+
+@pytest.mark.parametrize(
+    "secret",
+    ["short", "development-only-not-for-production", "test-only-secret"],
+)
+def test_production_rejects_weak_secret(monkeypatch, secret):
+    from app import create_app
+
+    monkeypatch.setenv("SECRET_KEY", secret)
+    with pytest.raises(RuntimeError, match="32 characters"):
+        create_app("production")
+
+
+def test_default_application_fails_closed_without_production_secret(monkeypatch):
+    from app import create_app
+
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="SECRET_KEY"):
+        create_app()
+
+
+def test_production_configuration_disables_debug_and_uses_secure_cookies(monkeypatch):
+    from app import create_app
+
+    secret = "a" * 64
+    monkeypatch.setenv("SECRET_KEY", secret)
+    production_app = create_app("production")
+
+    assert production_app.config["SECRET_KEY"] == secret
+    assert production_app.debug is False
+    assert production_app.config["SESSION_COOKIE_SECURE"] is True
+    assert production_app.config["REMEMBER_COOKIE_SECURE"] is True
+
+
+def test_production_rejects_flask_debug_override(monkeypatch):
+    from app import create_app
+
+    monkeypatch.setenv("SECRET_KEY", "a" * 64)
+    monkeypatch.setenv("FLASK_DEBUG", "1")
+    with pytest.raises(RuntimeError, match="FLASK_DEBUG"):
         create_app("production")
 
 

@@ -3,6 +3,7 @@ import sys
 
 import pytest
 
+os.environ["FLASK_ENV"] = "testing"
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app

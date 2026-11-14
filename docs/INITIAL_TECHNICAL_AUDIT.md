@@ -31,7 +31,7 @@ Python 3.12 is stated in the README, while the available workspace `.venv` repor
 
 The requirements are exact pins rather than a resolved transitive lock. The selected direct versions are broadly compatible with Python 3.11 and 3.12; scikit-learn's compatible NumPy/SciPy requirements are left to dependency resolution. No dependency vulnerability audit command or reproducible constraints/lock artifact is configured. The listed versions have not yet been installed and exercised in a clean environment during this audit. The workspace environments are incomplete for baseline testing: pytest and the Flask extensions are missing from the checked environments. Flask-Limiter's memory backend is unsuitable for coordinated multi-worker production rate limiting. The optional XGBoost import is not declared as a dependency and is not required by the training pipeline.
 
-## Security findings
+## Security findings (initial pre-implementation baseline)
 
 1. **Production secret fallback:** `config.py` falls back to the publicly predictable `dev-secret-key-change-in-production`; the application can start in production without a configured secret.
 2. **Unsafe redirect destination:** login redirects to the raw `next` query parameter without validating that it is local, enabling open redirects.
@@ -81,3 +81,22 @@ There is no `migrations/` directory, and startup uses `db.create_all()` rather t
 6. Add owner-scoped scan APIs/history and CSV/PDF reporting, with mocked scanner tests and no live network scans in the automated suite.
 7. Resolve dependencies for the supported Python version, add a tested constraints/lock artifact and a dependency audit workflow, and document external Nmap installation independently from Python packages.
 8. Deliver architecture, scanner, security, database, installation, dependency, and phase completion documentation, reporting unverified checks and remaining limitations honestly.
+
+## Final follow-up audit — 2026-11-14
+
+This section records the final review against the current Phase 1 implementation; it does not rewrite the historical baseline above.
+
+### Environment and synchronization
+
+- Windows 11 Pro 64-bit, build 26200; PowerShell 5.1.
+- Python 3.11.7 is available in the existing environments. The fresh `.phase1-nmap-venv` has Flask 3.1.3, `python-nmap` 0.7.1, and the complete test dependencies. The regular `.venv` does not contain `python-nmap`; no active venv is set in the current PowerShell process.
+- The current account is not an administrator. Nmap and Npcap are not installed; `nmap` is absent from PATH and common installation paths. `NMAP_PATH` is unset. No system PATH, driver, or registry changes were made.
+- The project source directory has no `.git` metadata. GitHub `main` was inspected and the Phase 1 implementation was published from a clean clone of the verified remote; see the final acceptance report for the current SHA.
+
+### Current implementation and security disposition
+
+- Authentication, owner-scoped analysis/history, CSRF, POST-only logout, local-only login redirects, safe CSV exports, scanner authorization/ownership, scoped target validation, bounded subprocess execution, scan cancellation, and report access have regression coverage.
+- A security review found that an unset `FLASK_ENV` selected development with a known signing key. The current fix defaults to production, rejects missing/short/known weak production keys, rejects `FLASK_DEBUG` overrides in production, forces production debug off, and uses an ephemeral random development key. Regression tests cover these cases.
+- `.env.example` contains placeholders only. `.env`, `.flaskenv`, databases, virtual environments, caches, and logs are ignored. The pre-existing tracked `.flaskenv` and `app_start.log` are identified for removal from Git tracking; local source copies are not deleted.
+- Remaining deployment risks include the in-process scan executor and cache, in-memory default rate-limit storage, synchronous model retraining available to authenticated users, and the need for TLS and trusted production WSGI deployment.
+- Scanner security and CVE/CVSS logic are verified by automated tests using mocked Nmap/NVD data. Nmap executable invocation, live NVD access, and the real loopback workflow remain unverified because this account lacks administrator privileges and the OS executable is absent.
