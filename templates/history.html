@@ -48,6 +48,7 @@
                     <td>{{ a.estimated_crack_time_display or '—' }}</td>
                     <td>
                         <form method="POST" action="{{ url_for('history.delete_password_analysis', analysis_id=a.id) }}" onsubmit="return confirm('Delete this analysis?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </td>
@@ -71,7 +72,7 @@
         <div class="col-md-3">
             <select name="category" class="form-select">
                 <option value="">All Verdicts</option>
-                {% for v in ["Safe", "Suspicious", "Phishing"] %}
+                {% for v in ["Safe", "Suspicious", "Phishing", "Unknown"] %}
                 <option value="{{ v }}" {{ 'selected' if category_filter == v else '' }}>{{ v }}</option>
                 {% endfor %}
             </select>
@@ -93,10 +94,11 @@
                     <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                     <td class="text-truncate" style="max-width: 260px;">{{ a.url }}</td>
                     <td>{{ a.verdict }}</td>
-                    <td>{{ a.confidence }}%</td>
+                    <td>{% if a.verdict == "Unknown" %}Unavailable{% else %}{{ a.confidence }}%{% endif %}</td>
                     <td>{{ a.threat_level }}</td>
                     <td>
                         <form method="POST" action="{{ url_for('history.delete_url_analysis', analysis_id=a.id) }}" onsubmit="return confirm('Delete this analysis?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
                         </form>
                     </td>

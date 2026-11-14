@@ -17,7 +17,7 @@
                 {{ form.submit(class="btn btn-cyber w-100") }}
             </form>
             <p class="mt-3 mb-0 small" style="color: var(--text-secondary);">
-                <i class="fa-solid fa-info-circle"></i> Analysis is purely structural/lexical - we never visit the URL.
+                <i class="fa-solid fa-info-circle"></i> URL analysis is lexical by default. Optional network checks only run when explicitly enabled.
             </p>
         </div>
     </div>
@@ -25,7 +25,7 @@
     <div class="col-lg-7">
         {% if result %}
 
-        {% if result.verdict_key == "phishing" %}
+        {% if result.classification == "PHISHING" %}
         <div class="alert alert-danger cyber-alert mb-3">
             <i class="fa-solid fa-triangle-exclamation"></i> <strong>Warning:</strong> This URL shows strong indicators of phishing. Do not enter any credentials or personal information.
         </div>
@@ -34,27 +34,42 @@
         <div class="cyber-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">Analysis Result</h5>
-                <span class="badge badge-cyber" style="background: {{ 'rgba(239,68,68,0.15); color: var(--accent-red)' if result.verdict_key == 'phishing' else ('rgba(247,169,52,0.15); color: var(--accent-orange)' if result.verdict_key == 'suspicious' else 'rgba(33,201,138,0.15); color: var(--accent-green)') }};">
-                    {{ result.verdict }}
+                <span class="badge badge-cyber" style="background: {{ 'rgba(239,68,68,0.15); color: var(--accent-red)' if result.classification == 'PHISHING' else ('rgba(247,169,52,0.15); color: var(--accent-orange)' if result.classification in ['SUSPICIOUS', 'UNKNOWN / INSUFFICIENT DATA'] else 'rgba(33,201,138,0.15); color: var(--accent-green)') }};">
+                    {{ result.classification }}
                 </span>
             </div>
 
             <div class="row mb-4">
                 <div class="col-6">
-                    <p class="mb-1"><strong>Confidence:</strong> {{ result.confidence }}%</p>
+                    <p class="mb-1"><strong>Hybrid risk score:</strong>
+                        {% if result.risk_score is not none %}{{ result.risk_score }}/100{% else %}Unavailable{% endif %}
+                    </p>
+                    <p class="mb-1"><strong>Risk band:</strong> {{ result.risk_category.replace('_', ' ')|title }}</p>
+                    <p class="mb-1"><strong>ML prediction:</strong> {{ result.ml_prediction }}</p>
+                    <p class="mb-1"><strong>Calibrated ML confidence:</strong>
+                        {% if result.confidence is not none %}{{ result.confidence }}%{% else %}Unavailable{% endif %}
+                    </p>
                     <p class="mb-1"><strong>Threat Level:</strong> {{ result.threat_level }}</p>
                 </div>
                 <div class="col-6">
-                    <p class="mb-1"><strong>HTTPS:</strong> {{ "Yes" if result.features.uses_https else "No" }}</p>
-                    <p class="mb-1"><strong>Domain:</strong> {{ result.features.domain }}</p>
+                    <p class="mb-1"><strong>Protocol:</strong> {{ result.protocol_analysis.scheme|upper }}</p>
+                    <p class="mb-1"><strong>Hostname:</strong> {{ result.domain_analysis.hostname }}</p>
+                    <p class="mb-1"><strong>Registered domain:</strong> {{ result.domain_analysis.registrable_domain }}</p>
+                    <p class="mb-1"><strong>TLS:</strong> {{ result.tls_analysis.status|replace('_', ' ')|title }}</p>
                 </div>
             </div>
 
             <div class="risk-meter mb-4">
-                <div class="risk-meter-fill" style="width: {{ result.confidence }}%; background: {{ '#ef4444' if result.verdict_key == 'phishing' else ('#f7a934' if result.verdict_key == 'suspicious' else '#21c98a') }};"></div>
+                <div class="risk-meter-fill" style="width: {{ result.risk_score if result.risk_score is not none else 0 }}%; background: {{ '#ef4444' if result.risk_score is not none and result.risk_score >= 60 else ('#f7a934' if result.risk_score is none or result.risk_score >= 20 else '#21c98a') }};"></div>
             </div>
 
-            <h6><i class="fa-solid fa-magnifying-glass"></i> Structural Indicators</h6>
+            <p class="small" style="color: var(--text-secondary);">
+                Submitted: {{ result.submitted_url }}<br>
+                Normalized: {{ result.normalized_url }}<br>
+                Risk score is a heuristic/model blend, not a calibrated probability. Model confidence was calibrated on synthetic validation data only.
+            </p>
+
+            <h6><i class="fa-solid fa-magnifying-glass"></i> URL Structure and Domain Indicators</h6>
             <div class="d-flex flex-wrap gap-2 mb-4">
                 {% for label, flag in [
                     ("IP Address Host", result.features.has_ip_address),
@@ -62,7 +77,11 @@
                     ("Embedded Redirect", result.features.has_double_slash_redirect),
                     ("URL Shortener", result.features.is_shortened),
                     ("Suspicious Keywords", result.features.has_suspicious_keywords),
-                    ("Excess Subdomains", result.features.subdomain_count >= 3)
+                    ("Excess Subdomains", result.features.subdomain_count >= 3),
+                    ("Punycode / Unicode", result.features.punycode_indicator),
+                    ("Typosquatting", result.features.typosquatting),
+                    ("Brand Impersonation", result.features.brand_impersonation),
+                    ("Suspicious Query", result.features.suspicious_query)
                 ] %}
                 <span class="badge badge-cyber" style="background: {{ 'rgba(239,68,68,0.15); color: var(--accent-red)' if flag else 'rgba(33,201,138,0.15); color: var(--accent-green)' }};">
                     <i class="fa-solid {{ 'fa-triangle-exclamation' if flag else 'fa-check' }}"></i> {{ label }}
@@ -70,12 +89,49 @@
                 {% endfor %}
             </div>
 
-            <h6><i class="fa-solid fa-list-check"></i> Reasons</h6>
+            <h6><i class="fa-solid fa-shield-halved"></i> TLS / Certificate Check</h6>
+            <p style="color: var(--text-secondary);">
+                {{ result.tls_analysis.reason }}
+                {% if result.tls_analysis.not_after %}<br>Certificate expiry: {{ result.tls_analysis.not_after }}{% endif %}
+                HTTPS encrypts transport; it does not establish that a site is trustworthy.
+            </p>
+
+            <h6><i class="fa-solid fa-arrow-right-arrow-left"></i> Redirect Check</h6>
+            <p style="color: var(--text-secondary);">{{ result.redirect_analysis.reason }}</p>
+            {% if result.redirect_analysis.chain %}
+            <ol>
+                {% for hop in result.redirect_analysis.chain %}
+                <li style="color: var(--text-secondary);">HTTP {{ hop.status_code }} → {{ hop.url }}</li>
+                {% endfor %}
+            </ol>
+            {% endif %}
+
+            <h6><i class="fa-solid fa-database"></i> Threat Intelligence</h6>
+            {% if result.threat_intelligence.sources %}
+            <ul>
+                {% for source in result.threat_intelligence.sources %}
+                <li style="color: var(--text-secondary);">{{ source.source }}: {{ source.status }}{% if source.malicious %} — reported malicious{% endif %}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color: var(--text-secondary);">{{ result.threat_intelligence.reason }}</p>
+            {% endif %}
+
+            <h6><i class="fa-solid fa-list-check"></i> Detection Explanations</h6>
             <ul class="mb-4">
                 {% for reason in result.reasons %}
                 <li style="color: var(--text-secondary);">{{ reason }}</li>
                 {% endfor %}
             </ul>
+
+            {% if result.evidence.unavailable %}
+            <h6><i class="fa-solid fa-circle-info"></i> Unavailable Checks</h6>
+            <ul class="mb-4">
+                {% for item in result.evidence.unavailable %}
+                <li style="color: var(--text-secondary);">{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
 
             <h6><i class="fa-solid fa-lightbulb"></i> Recommendations</h6>
             <ul class="mb-0">

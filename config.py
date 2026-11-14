@@ -1,13 +1,14 @@
 """
 config.py
 ---------
-Central configuration for the AI Cyber Security Toolkit.
+Central configuration for BastionIX.
 
-Uses environment variables where possible so secrets never live in source
-control. Falls back to safe development defaults.
+Uses environment variables for deployment secrets and scanner scope.
 """
 
 import os
+
+from scanners.target_validation import parse_approved_networks
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
@@ -16,7 +17,7 @@ class Config:
     """Base configuration shared by every environment."""
 
     # --- Core Flask / security settings -----------------------------------
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     # --- Database ------------------------------------------------------------
     SQLALCHEMY_DATABASE_URI = os.environ.get(
@@ -37,10 +38,6 @@ class Config:
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None
 
-    # --- Rate limiting ---------------------------------------------------------
-    RATELIMIT_DEFAULT = "200 per hour"
-    RATELIMIT_STORAGE_URI = "memory://"
-
     # --- ML model paths ----------------------------------------------------------
     PASSWORD_MODEL_PATH = os.path.join(BASE_DIR, "trained_models", "password_model.pkl")
     URL_MODEL_PATH = os.path.join(BASE_DIR, "trained_models", "url_model.pkl")
@@ -48,12 +45,34 @@ class Config:
     URL_DATASET_PATH = os.path.join(BASE_DIR, "datasets", "phishing_urls.csv")
 
     # --- App metadata (for Settings / About page) ---------------------------
-    APP_NAME = "AI Cyber Security Toolkit"
+    APP_NAME = "BastionIX"
     APP_VERSION = "1.0.0"
+    APP_DESCRIPTION = "AI-Powered Cybersecurity & Network Intelligence Platform"
+    APP_TAGLINE = "Intelligent Security. Continuous Visibility. Stronger Defense."
+    APP_LOGGER_NAME = "bastionix"
+
+    NMAP_PATH = os.environ.get("NMAP_PATH") or None
+    SCANNER_ALLOW_LOOPBACK = (
+        os.environ.get("BASTIONIX_SCANNER_ALLOW_LOOPBACK", "false").lower() == "true"
+    )
+
+    # Authorized scanner limits. Asset ranges must be explicitly configured
+    # through BASTIONIX_APPROVED_NETWORKS to extend the private defaults.
+    SCANNER_APPROVED_NETWORKS = parse_approved_networks(
+        os.environ.get("BASTIONIX_APPROVED_NETWORKS")
+    )
+    SCANNER_MAX_HOSTS = int(os.environ.get("BASTIONIX_SCANNER_MAX_HOSTS", "64"))
+    SCANNER_MAX_ACTIVE = int(os.environ.get("BASTIONIX_SCANNER_MAX_ACTIVE", "2"))
+    SCANNER_WORKERS = int(os.environ.get("BASTIONIX_SCANNER_WORKERS", "2"))
+    RATELIMIT_DEFAULT = "200 per hour"
+    RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
+    AUTO_CREATE_DB = False
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    SECRET_KEY = os.environ.get("SECRET_KEY", "development-only-not-for-production")
+    AUTO_CREATE_DB = False
 
 
 class ProductionConfig(Config):
@@ -64,8 +83,16 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    SECRET_KEY = "test-only-secret"
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     WTF_CSRF_ENABLED = False
+    AUTO_CREATE_DB = True
+    SCANNER_APPROVED_NETWORKS = parse_approved_networks(
+        "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
+    )
+    SCANNER_MAX_HOSTS = 64
+    SCANNER_MAX_ACTIVE = 2
+    SCANNER_WORKERS = 1
 
 
 config_by_name = {

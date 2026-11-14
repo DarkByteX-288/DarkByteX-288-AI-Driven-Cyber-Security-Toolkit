@@ -5,17 +5,18 @@ Small helper functions for input validation, rate limiting keys, and
 system-event logging used across route blueprints.
 """
 
+import logging
+
 from flask import request
 
 from models import db
 from models.system_log import SystemLog
 
+logger = logging.getLogger("bastionix.security")
+
 
 def get_client_ip() -> str:
-    """Best-effort client IP extraction, honoring a single trusted proxy hop."""
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """Return the transport peer address; forwarded headers are untrusted by default."""
     return request.remote_addr or "unknown"
 
 
@@ -34,3 +35,4 @@ def log_event(event_type: str, message: str, level: str = "INFO", user_id: int =
         db.session.commit()
     except Exception:
         db.session.rollback()
+        logger.exception("Could not persist a BastionIX security event.")

@@ -5,6 +5,7 @@ Authentication blueprint: registration, login, logout, and profile.
 """
 
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
@@ -66,7 +67,17 @@ def login():
             db.session.commit()
             log_event("login", f"User logged in: {user.username}", user_id=user.id)
             next_page = request.args.get("next")
-            return redirect(next_page or url_for("main.dashboard"))
+            if next_page:
+                parsed = urlsplit(next_page)
+                if (
+                    not parsed.scheme
+                    and not parsed.netloc
+                    and next_page.startswith("/")
+                    and not next_page.startswith("//")
+                    and "\\" not in next_page
+                ):
+                    return redirect(next_page)
+            return redirect(url_for("main.dashboard"))
 
         log_event("failed_login", f"Failed login attempt for identifier: {identifier}", level="WARNING")
         flash("Invalid credentials. Please try again.", "danger")
@@ -74,7 +85,7 @@ def login():
     return render_template("login.html", form=form)
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
     log_event("logout", f"User logged out: {current_user.username}", user_id=current_user.id)

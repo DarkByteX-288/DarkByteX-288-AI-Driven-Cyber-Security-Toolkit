@@ -40,6 +40,9 @@ class User(UserMixin, db.Model):
     settings = db.relationship(
         "UserSettings", backref="user", uselist=False, cascade="all, delete-orphan"
     )
+    network_scans = db.relationship(
+        "NetworkScan", back_populates="user", cascade="all, delete-orphan"
+    )
 
     # --- Password helpers ----------------------------------------------------
     def set_password(self, raw_password: str) -> None:

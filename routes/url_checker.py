@@ -32,7 +32,7 @@ def url_checker():
             url=raw_url,
             domain=result["features"]["domain"],
             verdict=result["verdict"],
-            confidence=result["confidence"],
+            confidence=result["confidence"] if result["confidence"] is not None else 0.0,
             threat_level=result["threat_level"],
             uses_https=result["features"]["uses_https"],
             url_length=result["features"]["url_length"],

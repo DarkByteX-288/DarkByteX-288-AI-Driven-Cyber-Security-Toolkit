@@ -9,6 +9,7 @@
         <div class="cyber-card">
             <h6 class="mb-3"><i class="fa-solid fa-palette"></i> Appearance</h6>
             <form method="POST" action="{{ url_for('settings.update_theme') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="btn-group w-100" role="group">
                     <button type="submit" name="theme" value="dark" class="btn {{ 'btn-cyber' if user_settings.theme == 'dark' else 'btn-cyber-outline' }}">
                         <i class="fa-solid fa-moon"></i> Dark Mode
@@ -32,6 +33,7 @@
         <div class="cyber-card">
             <h6 class="mb-3 text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h6>
             <form method="POST" action="{{ url_for('settings.clear_history') }}" onsubmit="return confirm('This will permanently delete all your analysis history. Continue?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-danger w-100"><i class="fa-solid fa-trash"></i> Clear My History</button>
             </form>
         </div>
@@ -41,6 +43,7 @@
         <div class="cyber-card">
             <h6 class="mb-3"><i class="fa-solid fa-brain"></i> AI Model Management</h6>
             <form method="POST" action="{{ url_for('settings.retrain_models') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-3">
                     <select name="target" class="form-select">
                         <option value="both">Both Models</option>

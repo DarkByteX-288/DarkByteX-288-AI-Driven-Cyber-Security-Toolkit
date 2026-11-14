@@ -1,8 +1,19 @@
 venv/
+.venv/
+.phase1-venv/
+.phase1-nmap-venv/
+.idea/
 __pycache__/
 *.pyc
 .pytest_cache/
 instance/database.db
 *.db
 .env
+.env.*
+!.env.example
+.flaskenv
+*.log
 .DS_Store
+
+# Generated URL training splits and evaluation outputs.
+datasets/url_detection_artifacts/

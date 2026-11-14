@@ -6,6 +6,7 @@ analyses, and the overall security dashboard.
 """
 
 import csv
+import html
 import io
 from datetime import datetime
 
@@ -45,13 +46,85 @@ def generate_url_csv(analyses) -> io.BytesIO:
     ])
     for a in analyses:
         writer.writerow([
-            a.created_at.strftime("%Y-%m-%d %H:%M"), a.url, a.domain, a.verdict,
+            a.created_at.strftime("%Y-%m-%d %H:%M"), _safe_csv_cell(a.url), a.domain, a.verdict,
             f"{a.confidence}%", a.threat_level, a.uses_https, a.has_ip_address,
             a.is_shortened, a.has_suspicious_keywords,
         ])
     out = io.BytesIO(buffer.getvalue().encode("utf-8"))
     out.seek(0)
     return out
+
+
+def _safe_csv_cell(value):
+    """Prevent spreadsheet formula execution for user-controlled CSV cells."""
+    text = "" if value is None else str(value)
+    if text.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+        return "'" + text
+    return text
+
+
+def generate_network_scan_pdf(scan, findings) -> io.BytesIO:
+    """Build a bounded scan report that labels version matches as potential."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter, topMargin=0.6 * inch, bottomMargin=0.6 * inch
+    )
+    styles = _pdf_styles()
+    story = [
+        Paragraph("BastionIX - Network Assessment Report", styles["ReportTitle"]),
+        Paragraph(f"Scan ID: {scan.id}", styles["Normal"]),
+        Paragraph(f"Authorized target: {html.escape(scan.target)}", styles["Normal"]),
+        Paragraph(f"Status: {html.escape(scan.status)}", styles["Normal"]),
+        Paragraph(f"Created: {scan.created_at.isoformat()}", styles["Normal"]),
+        Paragraph(
+            "CVE version matches are potential matches, not proof of vulnerability or exploitability.",
+            styles["Normal"],
+        ),
+        Spacer(1, 12),
+        Paragraph("Findings", styles["SectionHeading"]),
+    ]
+    rows = [["Host:Port", "Type / CVE", "Severity / CVSS", "Details / Remediation"]]
+    for finding in findings:
+        port = finding.port
+        location = f"{port.host.address}:{port.port}" if port else "Asset"
+        details = (
+            f"<b>{html.escape(finding.title)}</b><br/>"
+            f"{html.escape(finding.description[:900])}<br/><br/>"
+            f"<b>Remediation:</b> {html.escape(finding.remediation[:600])}"
+        )
+        rows.append([
+            Paragraph(html.escape(location), styles["Normal"]),
+            Paragraph(html.escape(finding.cve_id or finding.classification), styles["Normal"]),
+            Paragraph(
+                html.escape(
+                    f"{finding.severity}"
+                    + (
+                        f" (CVSS {finding.cvss_version}: {finding.cvss_score})"
+                        if finding.cvss_version and finding.cvss_score is not None
+                        else ""
+                    )
+                ),
+                styles["Normal"],
+            ),
+            Paragraph(details, styles["Normal"]),
+        ])
+    if len(rows) == 1:
+        rows.append(["No findings recorded.", "", "", ""])
+    table = Table(rows, colWidths=[95, 85, 65, 235], repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#10243a")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(table)
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
 
 
 def _pdf_styles():
@@ -68,8 +141,8 @@ def generate_security_pdf(stats: dict, recent_password, recent_url, username: st
     styles = _pdf_styles()
     story = []
 
-    story.append(Paragraph("AI Cyber Security Toolkit - Security Report", styles["ReportTitle"]))
-    story.append(Paragraph(f"Generated for: {username}", styles["Normal"]))
+    story.append(Paragraph("BastionIX - Security Report", styles["ReportTitle"]))
+    story.append(Paragraph(f"Generated for: {html.escape(username)}", styles["Normal"]))
     story.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles["Normal"]))
     story.append(Spacer(1, 12))
 

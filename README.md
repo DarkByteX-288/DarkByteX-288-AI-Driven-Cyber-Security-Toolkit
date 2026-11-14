@@ -1,155 +1,86 @@
-# AI-Driven Cyber Security Toolkit
+# BastionIX
 
-Password Strength Evaluation · Phishing URL Detection · Attack Simulation · Adaptive Defense
+**AI-Powered Cybersecurity & Network Intelligence Platform**
 
-A Flask web application that combines rule-based security analysis with
-machine learning to help users understand and improve their password
-hygiene and spot phishing links, backed by a full dashboard, history,
-reporting, and settings experience.
+**Intelligent Security. Continuous Visibility. Stronger Defense.**
 
----
+BastionIX builds on the existing Flask application to provide password-strength analysis, phishing URL analysis, defensive network assessment, owner-scoped history, analytics, and reports. The network scanner is restricted to configured approved asset ranges (private ranges by default), requires an explicit authorization confirmation, and does not perform exploitation, credential attacks, stealth, or denial-of-service testing.
 
-## 1. Features
+## Features
 
-- **Authentication** — registration, login/logout, "remember me", hashed
-  passwords (PBKDF2-SHA256 via Werkzeug), protected routes.
-- **AI Password Strength Evaluator** — entropy, dictionary/keyboard-pattern/
-  sequential/repeated-character detection, a RandomForest ML prediction,
-  a 0-100 strength score, and tailored recommendations.
-- **Attack Simulation** — dictionary, brute-force, hybrid, pattern, and
-  keyboard-walk attack time estimates against the password's characteristics
-  (never against the actual password value; nothing is cracked for real).
-- **AI Phishing URL Detection** — HTTPS check, IP-address hosts, `@` symbols,
-  URL shorteners, suspicious keywords, subdomain counts, TLD reputation, and
-  a RandomForest ML verdict (Safe / Suspicious / Phishing) with reasons and
-  recommendations. Analysis is purely lexical — the URL is never visited.
-- **Dashboard** — aggregate stats, pie/bar charts (Chart.js), a security
-  score ring, and recent activity.
-- **History** — search, filter, and delete past analyses.
-- **Settings** — dark/light theme, CSV/PDF export, clear history, one-click
-  AI model retraining, database & app info.
-- **Reports** — CSV exports and a PDF security summary report.
+- Authentication, per-user settings, CSRF-protected forms, and owner-scoped data.
+- Password strength analysis, transparent heuristic scoring, ML inference, simulated attack estimates, and recommendations; the raw password is not persisted.
+- Phishing URL analysis with local structural checks and optional bounded TLS/redirect and configured threat-intelligence checks.
+- Dashboard analytics, analysis history, CSV/PDF reports, and ML model management.
+- Authorized network discovery, bounded TCP port/service identification, potential NVD CVE matches with CVSS severity, progress/cancellation, audit history, and scan reports.
+- Existing AI artifacts are trained on synthetic data. Their results are not a substitute for real-world validation.
 
-## 2. Tech Stack
+## Technology and supported Python
 
-| Layer          | Tools |
-|----------------|-------|
-| Frontend       | HTML5, CSS3, Vanilla JS, Bootstrap 5, Chart.js, Font Awesome |
-| Backend        | Python 3.12, Flask, Flask-SQLAlchemy, Flask-Login, Flask-Migrate, Flask-WTF, Flask-Limiter |
-| Database       | SQLite |
-| Machine Learning | scikit-learn (RandomForest), pandas, NumPy, Joblib |
-| Reports        | ReportLab (PDF), built-in `csv` module |
+The verified runtime is Python 3.11.7. Dependencies are directly pinned in `requirements.txt`; the complete tested environment is captured by `requirements-lock.txt`. Development/testing tools and dependency auditing are in `requirements-dev.txt`.
 
-## 3. Project Structure
+The backend uses Flask, Flask-SQLAlchemy, Flask-Migrate, Flask-Login, Flask-WTF, Flask-Limiter, SQLAlchemy, scikit-learn, pandas, NumPy, Joblib, ReportLab, and `python-nmap`. `python-nmap` is a Python integration package, not the Nmap executable.
 
-```
-/project
-├── app.py                     # Flask application factory
-├── config.py                  # Environment-based configuration
-├── requirements.txt
-├── models/                    # SQLAlchemy models (User, PasswordAnalysis, URLAnalysis, AttackLog, SystemLog, UserSettings)
-├── routes/                    # Blueprints (auth, main, password_checker, url_checker, history, settings, reports)
-├── services/                  # Business logic: feature extraction, scoring, attack simulation, recommendations
-├── ml/                        # Dataset generation, model training, model loader
-├── utils/                     # Forms, report generation, security helpers
-├── static/{css,js,images}/
-├── templates/                 # Jinja2 templates (dark-themed, responsive)
-├── instance/                  # SQLite database lives here at runtime
-├── datasets/                  # Generated training datasets (CSV)
-├── trained_models/            # Trained Joblib model files (.pkl)
-└── tests/                     # Pytest unit tests
-```
+## Installation
 
-## 4. Installation
-
-### Standard Python setup
-
-```bash
-cd project
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```
-
-Then open **http://127.0.0.1:5000** in your browser.
-
-### Windows / Conda setup
-
-If `pip install -r requirements.txt` fails on Windows due to `scikit-learn` build requirements,
-use a Conda environment and install the ML dependencies from conda-forge:
+Create and activate a virtual environment, then install pinned packages:
 
 ```powershell
-conda create -p D:\conda_envs\attaullah python=3.11 -y
-conda install -p D:\conda_envs\attaullah -c conda-forge scikit-learn==1.5.1 numpy pandas joblib -y
-D:\conda_envs\attaullah\python.exe -m pip install -r requirements.txt --no-cache-dir
-D:\conda_envs\attaullah\python.exe app.py
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements-lock.txt
 ```
 
-Then open **http://127.0.0.1:5000** in your browser.
+On Unix-like shells, activate with `source .venv/bin/activate`.
 
-On first run, the app automatically:
-1. Creates the SQLite database and all tables.
-2. Generates synthetic training datasets (`datasets/*.csv`) if missing.
-3. Trains and saves both RandomForest models (`trained_models/*.pkl`) if missing.
+### Install Nmap separately
 
-### Re-training models manually (optional)
+Nmap is an operating-system executable; installing `python-nmap` alone is not enough.
 
-```bash
-python ml/generate_password_dataset.py && python ml/train_password_model.py
-python ml/generate_url_dataset.py && python ml/train_url_model.py
+- **Windows:** Download the signed self-installer from [nmap.org/download.html](https://nmap.org/download.html), verify its Nmap Software LLC signature, and install it. Npcap and Windows network-driver changes are optional for BastionIX's TCP connect scans; do not install them unless raw-packet scans are separately required. Set `NMAP_PATH` to the installed `nmap.exe` when it is not on PATH.
+- **Debian/Ubuntu:** `sudo apt install nmap`.
+- **Fedora/RHEL-family:** `sudo dnf install nmap` (or use the distribution's supported package manager).
+- **macOS:** Download the official `.dmg` from [nmap.org/download.html](https://nmap.org/download.html) and run its installer; alternatively install the distribution package through a trusted package manager.
+
+Verify installation with `nmap --version` and the authenticated `GET /api/scans/health` endpoint. BastionIX also discovers common Windows install locations and supports an explicit `NMAP_PATH` path without changing system PATH.
+
+Loopback is rejected by default. For a disposable local-only verification environment, explicitly set both `BASTIONIX_APPROVED_NETWORKS=127.0.0.1/32` and `BASTIONIX_SCANNER_ALLOW_LOOPBACK=true`; do not enable this on a general deployment. Loopback smoke scans use TCP connect mode and skip host discovery only for the explicitly allowed loopback target.
+
+### Configure and migrate the database
+
+Set a unique, random `SECRET_KEY` for production. The scanner defaults to RFC1918 IPv4 and IPv6 unique-local ranges only. To narrow or extend asset scope, set `BASTIONIX_APPROVED_NETWORKS` to a comma-separated list of strict CIDRs that the deployment owner is authorized to assess. Public ranges are never included by default. Scanner limits can be adjusted with `BASTIONIX_SCANNER_MAX_HOSTS`, `BASTIONIX_SCANNER_MAX_ACTIVE`, and `BASTIONIX_SCANNER_WORKERS`; host count is capped at 256.
+
+Apply migrations before starting the app:
+
+```powershell
+$env:SECRET_KEY = "<generate-a-long-random-secret>"
+python -m flask db upgrade
+python -m flask run
 ```
 
-Or use **Settings → AI Model Management → Retrain AI Models** in the UI.
+The checked-in existing SQLite database is upgraded additively; migrations preserve existing accounts and analysis records. Back up the database before applying migrations. Do not copy production data into a test database.
 
-### Running tests
+## Run tests and audit dependencies
 
-```bash
-D:\conda_envs\attaullah\python.exe -m pip install pytest --no-cache-dir
-D:\conda_envs\attaullah\python.exe -m pytest tests/ -v
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+python -m pip_audit -r requirements.txt
 ```
 
-## 5. About the training data
+Automated scanner tests use mocked Nmap/NVD data and do not initiate network scans. Run the tests on Python versions that the project claims to support before deploying.
 
-Real breached-password corpora and phishing-URL feeds (e.g. rockyou.txt,
-PhishTank, OpenPhish) carry licensing/attribution and distribution
-restrictions that don't belong bundled in a public repo. Instead,
-`ml/generate_password_dataset.py` and `ml/generate_url_dataset.py`
-procedurally generate structurally representative examples across the full
-spectrum (dictionary words, keyboard walks, random strong strings /
-IP-hosted links, URL shorteners, brand-lookalike domains, etc.) using the
-**same rule-based features** the app extracts at inference time. This keeps
-the project dependency-free and legally unencumbered while still training
-genuinely predictive models. For a production deployment, swap in a real
-labeled corpus (e.g. a HIBP-derived password list, PhishTank/OpenPhish feed)
-by replacing the CSVs in `datasets/` and re-running the training scripts —
-the feature extraction and model code needs no changes.
+## Network scanner operation
 
-## 6. Security notes
+Scans require authentication and a JSON request with `authorization_confirmed: true`. Targets must be a single IP, CIDR, or DNS hostname that resolves entirely inside configured approved ranges. DNS results are validated and pinned to resolved IP addresses before Nmap is run. The only supported profile uses bounded Nmap host discovery and light TCP service/version detection; raw Nmap arguments are never accepted.
 
-- Passwords are **never stored in plaintext** — only derived, non-reversible
-  metrics (length, entropy, boolean flags) are persisted.
-- URL analysis is **purely structural/lexical** — the app never makes a
-  network request to the URL being analyzed.
-- CSRF protection (Flask-WTF), secure session cookies, security response
-  headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`),
-  parameterized queries (via SQLAlchemy ORM), and basic rate limiting
-  (Flask-Limiter) are enabled by default.
-- Set `SECRET_KEY` and `FORCE_HTTPS=true` environment variables before any
-  real deployment; the defaults in `config.py` are for local development only.
+NVD matches are marked **potential**. A product/version keyword match does not establish that a specific build is affected or exploitable. Open-port records are informational. The scanner does not execute vulnerability scripts, exploit code, credential checks, stealth options, or denial-of-service tests. CVE checks are best effort and scans continue when NVD is unavailable or rate-limited.
 
-## 7. Known limitations / scope notes
+See [Network Scanner](docs/NETWORK_SCANNER.md), [Security Design](docs/SECURITY_DESIGN.md), and [Installation](docs/INSTALLATION.md) for deployment details and limitations.
 
-This is an educational / portfolio-grade project, not a hardened production
-security product:
+## Repository and deployment
 
-- The bundled datasets are synthetic (see §5) rather than sourced from real
-  breach/phishing corpora, so reported model accuracy reflects how well the
-  model fits the synthetic generation rules, not real-world phishing traffic.
-- Crack-time estimates use a fixed, published "typical GPU" guess-rate
-  assumption for teaching purposes — real attacker capability varies widely
-  with hash algorithm, hardware, and salting.
-- Rate limiting uses in-memory storage (`memory://`), which resets on
-  restart and doesn't scale across multiple worker processes — swap in Redis
-  (`RATELIMIT_STORAGE_URI`) for production.
-- No email verification or password-reset flow is implemented.
+The source project is currently named `DarkByteX-288-AI-Driven-Cyber-Security-Toolkit` on GitHub. Application rebranding does not rename the repository; repository renaming is a separate owner-controlled GitHub operation.
+
+This application should be deployed behind a trusted TLS-terminating reverse proxy with a production WSGI server and shared rate-limit storage. The current background scan executor is in-process; deployments using multiple web workers need a shared task queue and coordination mechanism before scaling scanner concurrency across workers.

@@ -1,12 +1,14 @@
 """
 app.py
 --------
-Application factory for the AI Cyber Security Toolkit. Run directly with
+Application factory for BastionIX. Run directly with
 `flask run` (after setting FLASK_APP=app.py, done automatically by the
 .flaskenv) or `python app.py`.
 """
 
+import logging
 import os
+import threading
 
 from flask import Flask, render_template
 from flask_login import LoginManager
@@ -23,13 +25,27 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger("bastionix.app")
 
 
 def create_app(env=None):
     app = Flask(__name__, instance_relative_config=False)
 
     env = env or os.environ.get("FLASK_ENV", "development")
-    app.config.from_object(config_by_name.get(env, config_by_name["development"]))
+    if env not in config_by_name:
+        raise ValueError(f"Unknown application environment: {env}")
+    app.config.from_object(config_by_name[env])
+    if env == "production" and not app.config.get("SECRET_KEY"):
+        raise RuntimeError("SECRET_KEY must be configured for production.")
+    if app.config["SCANNER_MAX_HOSTS"] < 1 or app.config["SCANNER_MAX_HOSTS"] > 256:
+        raise RuntimeError("BASTIONIX_SCANNER_MAX_HOSTS must be between 1 and 256.")
+    if (
+        app.config["SCANNER_MAX_ACTIVE"] < 1
+        or app.config["SCANNER_MAX_ACTIVE"] > 16
+        or app.config["SCANNER_WORKERS"] < 1
+        or app.config["SCANNER_WORKERS"] > 8
+    ):
+        raise RuntimeError("Scanner concurrency must be at most 16 active scans and 8 workers.")
 
     # Ensure instance folder exists for the SQLite file
     os.makedirs(os.path.join(app.root_path, "instance"), exist_ok=True)
@@ -58,6 +74,8 @@ def create_app(env=None):
     from routes.history import history_bp
     from routes.settings import settings_bp
     from routes.reports import reports_bp
+    from routes.network_scanner import scanner_bp
+    from routes.network_scanner_page import scanner_pages_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -66,6 +84,11 @@ def create_app(env=None):
     app.register_blueprint(history_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(scanner_bp)
+    app.register_blueprint(scanner_pages_bp)
+    app.extensions["scan_submission_lock"] = threading.RLock()
+    from tasks.scanner_tasks import init_scan_manager
+    init_scan_manager(app)
 
     # --- Error handlers -----------------------------------------------------------
     @app.errorhandler(404)
@@ -75,6 +98,10 @@ def create_app(env=None):
     @app.errorhandler(500)
     def server_error(e):
         db.session.rollback()
+        logger.error(
+            "Unhandled BastionIX request error.",
+            exc_info=(type(e), e, e.__traceback__),
+        )
         return render_template("500.html"), 500
 
     @app.errorhandler(429)
@@ -87,16 +114,25 @@ def create_app(env=None):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if app.config["SESSION_COOKIE_SECURE"]:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
     # --- Template globals -----------------------------------------------------------
     @app.context_processor
     def inject_globals():
-        return {"app_name": app.config["APP_NAME"], "app_version": app.config["APP_VERSION"]}
+        return {
+            "app_name": app.config["APP_NAME"],
+            "app_version": app.config["APP_VERSION"],
+            "app_description": app.config["APP_DESCRIPTION"],
+            "app_tagline": app.config["APP_TAGLINE"],
+        }
 
-    # --- Create tables on first run --------------------------------------------------
-    with app.app_context():
-        db.create_all()
+    # Development/testing bootstrap retains the existing no-migration startup;
+    # production schema changes are applied with `flask db upgrade`.
+    if app.config["AUTO_CREATE_DB"]:
+        with app.app_context():
+            db.create_all()
 
     return app
 

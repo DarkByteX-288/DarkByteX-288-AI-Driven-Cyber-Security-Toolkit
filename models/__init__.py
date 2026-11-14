@@ -17,3 +17,13 @@ from .url_analysis import URLAnalysis             # noqa: E402,F401
 from .attack_log import AttackLog                 # noqa: E402,F401
 from .system_log import SystemLog                 # noqa: E402,F401
 from .settings import UserSettings                # noqa: E402,F401
+from .network_scan import (                       # noqa: E402,F401
+    NetworkScan,
+    NetworkHost,
+    NetworkPort,
+    DetectedService,
+    VulnerabilityFinding,
+    CVEReference,
+    ScanConfiguration,
+    ScanAuditLog,
+)

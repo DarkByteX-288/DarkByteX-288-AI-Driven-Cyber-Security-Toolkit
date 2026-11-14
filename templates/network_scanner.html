@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Network Vulnerability Scanner - {{ app_name }}{% endblock %}
+{% block content %}
+<h3 class="mb-2"><i class="fa-solid fa-network-wired"></i> Network Vulnerability Assessment</h3>
+<p class="mb-4" style="color: var(--text-secondary);">
+    Assess only assets you are explicitly authorized to scan. Private approved ranges are enforced by the server.
+</p>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="cyber-card">
+            <form id="network-scan-form">
+                <div class="mb-3">
+                    <label class="form-label" for="scan-target">Authorized target</label>
+                    <input class="form-control" id="scan-target" name="target" maxlength="253"
+                           placeholder="Private IP, CIDR, or approved hostname" required>
+                    <small style="color: var(--text-secondary);">Configured private asset ranges only; max 64 hosts by default.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="scan-ports">TCP ports (optional)</label>
+                    <input class="form-control" id="scan-ports" name="ports"
+                           placeholder="Default common ports; or e.g. 22,80,443">
+                    <small style="color: var(--text-secondary);">Maximum 100 unique ports. TCP only.</small>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="authorization-confirmed" required>
+                    <label class="form-check-label" for="authorization-confirmed">
+                        I am authorized to assess this asset and understand this scan performs non-exploitative discovery and service identification.
+                    </label>
+                </div>
+                <button class="btn btn-cyber w-100" type="submit" data-no-spinner id="start-scan-button">
+                    <i class="fa-solid fa-play"></i> Start Safe Scan
+                </button>
+            </form>
+            <div class="alert alert-info mt-3 mb-0" role="note">
+                Nmap must be installed separately on the server. No exploitation, credential checks, stealth, or denial-of-service tests are run.
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="cyber-card">
+            <h5>Scan progress</h5>
+            <div class="risk-meter mb-2">
+                <div id="scan-progress-bar" class="risk-meter-fill" style="width:0%;background:var(--accent-cyan);"></div>
+            </div>
+            <p id="scan-status" role="status" aria-live="polite" style="color:var(--text-secondary);">No scan selected.</p>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="cancel-scan-button" hidden>Cancel scan</button>
+            <div class="d-flex gap-2 mt-3" id="scan-report-links" hidden>
+                <a class="btn btn-cyber-outline btn-sm" id="scan-csv-link">CSV report</a>
+                <a class="btn btn-cyber-outline btn-sm" id="scan-pdf-link">PDF report</a>
+            </div>
+            <div id="scan-results" class="mt-4"></div>
+        </div>
+        <div class="cyber-card">
+            <h5>Recent scans</h5>
+            <ul id="scan-history" class="list-unstyled mb-0" style="color:var(--text-secondary);">
+                <li>Loading scan history...</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/network_scanner.js') }}"></script>
+{% endblock %}

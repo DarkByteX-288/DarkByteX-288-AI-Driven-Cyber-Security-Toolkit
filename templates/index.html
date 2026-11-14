@@ -3,9 +3,10 @@
 {% block content %}
 <div class="hero-section">
     <h1 class="hero-title mb-3"><i class="fa-solid fa-shield-halved"></i> {{ app_name }}</h1>
+    <p class="lead">{{ app_tagline }}</p>
     <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
-        AI-driven password strength evaluation, phishing URL detection, attack simulation,
-        and adaptive defense - all in one modern security dashboard.
+        AI-driven password strength evaluation, phishing URL detection, authorized network
+        vulnerability assessment, and adaptive defense in one security platform.
     </p>
     <div class="mt-4">
         {% if current_user.is_authenticated %}
