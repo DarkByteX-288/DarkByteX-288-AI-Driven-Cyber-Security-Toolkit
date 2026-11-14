@@ -51,4 +51,4 @@ The expanded test suite passed **97 tests**; compile, dependency consistency, de
 
 ## Repository publication limitation
 
-The checked-out workspace contains no `.git` directory, so it has no local branch, commit history, or configured remote. GitHub reports the intended repository's `main` branch, but the available GitHub tools are read-only and no repository write/commit tool is available. Local changes therefore cannot be committed or pushed from this workspace; that acceptance item remains blocked.
+The source project workspace contains no `.git` directory. A clean clone of the verified repository URL was used for publication; commit `2e8fc3b0e5163e77ebc5d0446b5121c8e670b92a` is pushed to `main`. The source project directory itself remains a non-Git workspace.

@@ -2,7 +2,7 @@
 
 **Target:** BastionIX 1.0.0
 
-**Status: INCOMPLETE.** The current account cannot install the Nmap system executable, so the required real loopback scan was not run. Changes also cannot be committed or pushed from this non-Git workspace.
+**Status: INCOMPLETE.** The current account cannot install the Nmap system executable, so the required real loopback scan was not run. The implementation was published to `main` at `2e8fc3b0e5163e77ebc5d0446b5121c8e670b92a`.
 
 ## Completed work
 
@@ -65,9 +65,9 @@ No uncontrolled network scan was performed. The authorized `127.0.0.1` request w
 - The current Windows account (`DBX\adibs`) is not an administrator. The signed official Nmap 7.993 installer was verified but not executed; no Npcap driver, registry, or PATH settings were changed. Install Nmap from an administrator account, configure `NMAP_PATH` or PATH, and perform the limited `127.0.0.1` test described in `docs/NMAP_BLOCKER_ANALYSIS.md`.
 - The installer release number is 7.993; this is **not** an installed Nmap version. No executable path or installed version is available to report.
 - Real Nmap output parsing, live database persistence/history, and report generation remain unverified. Their unit/API paths passed only with mocked scanner output.
-- The workspace has no local `.git` repository or branch, and available GitHub integration is read-only. GitHub reports remote branch `main` at `52e5c6ec687fd142836e225ab9bb3d060bcaa2e6`; no changes were committed or pushed.
+- The source project directory has no `.git` repository. A clean clone of the verified remote was used to publish the changes; `main` now contains commit `2e8fc3b0e5163e77ebc5d0446b5121c8e670b92a`. The source directory itself remains a non-Git workspace.
 - The task executor, active-scan coordination, and NVD cache are process-local. Multiple WSGI workers require a shared queue and distributed coordination; queued scans do not survive process restarts.
 - Rate limiting defaults to in-memory storage; multi-worker deployments require shared storage.
 - Existing model retraining remains synchronous and available to authenticated users; restrict it or move it to an administrative task before multi-user production deployment.
 - Python 3.11.7 was verified; Python 3.12 was not tested.
-**Phase 1 remains INCOMPLETE** until Nmap is installed, the real local scan workflow succeeds, and changes can be committed and pushed to the intended `main` branch. No Phase 2 work has been started.
+**Phase 1 remains INCOMPLETE** until Nmap is installed and the real local scan workflow succeeds. The Phase 1 implementation has been pushed to `main`. No Phase 2 work has been started.
