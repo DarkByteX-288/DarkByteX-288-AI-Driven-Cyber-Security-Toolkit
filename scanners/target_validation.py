@@ -136,6 +136,8 @@ def validate_target(target, approved_networks, max_hosts=64, allow_loopback=Fals
     except ValueError:
         hostname, addresses = _resolve_hostname(submitted)
 
+    if len(addresses) > max_hosts:
+        raise TargetValidationError(f"Target exceeds the {max_hosts}-host scan limit.")
     if any(
         not _address_is_approved(address, approved_networks, allow_loopback)
         for address in addresses

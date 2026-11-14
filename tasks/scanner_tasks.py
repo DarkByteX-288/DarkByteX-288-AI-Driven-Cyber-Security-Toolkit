@@ -211,6 +211,8 @@ class ScanTaskManager:
                     ),
                 )
                 db.session.add(service)
+                if port.state != "open":
+                    continue
                 db.session.add(VulnerabilityFinding(
                     scan_id=scan_id,
                     port_id=port.id,

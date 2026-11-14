@@ -81,8 +81,44 @@ def generate_network_scan_pdf(scan, findings) -> io.BytesIO:
             styles["Normal"],
         ),
         Spacer(1, 12),
-        Paragraph("Findings", styles["SectionHeading"]),
+        Paragraph("Port observations", styles["SectionHeading"]),
     ]
+    port_rows = [["Host", "Port", "Protocol", "State", "Service", "Product", "Version"]]
+    for host in scan.hosts:
+        if not host.ports:
+            port_rows.append([
+                Paragraph(html.escape(host.address), styles["Normal"]),
+                "", "", Paragraph(html.escape(host.state), styles["Normal"]),
+                "No ports returned", "", "",
+            ])
+            continue
+        for port in host.ports:
+            service = port.service
+            port_rows.append([
+                Paragraph(html.escape(host.address), styles["Normal"]),
+                str(port.port),
+                html.escape(port.protocol),
+                html.escape(port.state),
+                html.escape(service.name or "") if service else "",
+                html.escape(service.product or "") if service else "",
+                html.escape(service.version or "") if service else "",
+            ])
+    if len(port_rows) == 1:
+        port_rows.append(["No port observations recorded.", "", "", "", "", "", ""])
+    port_table = Table(port_rows, colWidths=[75, 35, 45, 55, 80, 100, 100], repeatRows=1)
+    port_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#10243a")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+    ]))
+    story.extend([
+        port_table,
+        Spacer(1, 12),
+        Paragraph("Findings", styles["SectionHeading"]),
+    ])
     rows = [["Host:Port", "Type / CVE", "Severity / CVSS", "Details / Remediation"]]
     for finding in findings:
         port = finding.port

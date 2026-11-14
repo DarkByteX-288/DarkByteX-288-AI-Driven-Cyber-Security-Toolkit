@@ -76,6 +76,23 @@ def test_dns_results_are_pinned_and_all_must_be_in_scope(monkeypatch):
     assert result.addresses == ("192.168.10.9",)
 
 
+def test_dns_answer_count_cannot_exceed_max_hosts(monkeypatch):
+    class MultiAddressResolver:
+        def resolve(self, hostname, record_type, **kwargs):
+            if record_type == "A":
+                return [
+                    SimpleNamespace(address="192.168.10.9"),
+                    SimpleNamespace(address="192.168.10.10"),
+                ]
+            return [SimpleNamespace(address="fc00::1")]
+
+    monkeypatch.setattr(
+        "scanners.target_validation.dns.resolver.Resolver", MultiAddressResolver
+    )
+    with pytest.raises(TargetValidationError, match="2-host scan limit"):
+        validate_target("assets.example.test", APPROVED, max_hosts=2)
+
+
 def test_dns_timeout_fails_closed(monkeypatch):
     class TimeoutResolver:
         def resolve(self, *args, **kwargs):

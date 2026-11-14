@@ -2,7 +2,7 @@
 
 **Target:** BastionIX 1.0.0
 
-**Status: INCOMPLETE.** The current account cannot install the Nmap system executable, so the required real loopback scan was not run. The implementation was published to `main` at `2e8fc3b0e5163e77ebc5d0446b5121c8e670b92a`.
+**Status: COMPLETE after live Windows verification.** The installed Nmap executable is operational, and a real authenticated Flask workflow scanned only `127.0.0.1`. The executable detection, live scan evidence, and acceptance results are recorded in `docs/PHASE_1_FINAL_ACCEPTANCE_REPORT.md`.
 
 ## Completed work
 
@@ -12,6 +12,7 @@
 - Added the scanner page and client-side status, result, cancellation, and report workflow.
 - Added `NMAP_PATH`, Windows executable discovery, Nmap version/integration probing, and authenticated `/api/scans/health` status reporting. Missing, inaccessible, and failed executable states are distinguished without exposing local paths.
 - Added a default-off loopback exception requiring both the explicit `127.0.0.1/32` approved range and `BASTIONIX_SCANNER_ALLOW_LOOPBACK=true`; loopback uses TCP connect and `-Pn`.
+- Persisted open, closed, and filtered TCP port observations from Nmap; vulnerability findings are only emitted for open ports. Hostname DNS answers are also capped by the configured maximum host count.
 - Persisted the CVSS metric version and applied version-aware CVSS 2.0 versus 3.x/4.0 severity classification.
 - Hardened configuration after a security review: unset environment now defaults to production, production requires a 32+ character environment secret, known weak keys and `FLASK_DEBUG` are rejected, and development uses a random ephemeral key.
 - Added additive Alembic revisions. The legacy baseline preserves existing tables; the scanner revision adds the network assessment schema.
@@ -25,7 +26,7 @@
 - Additional blocker-resolution checks: `tests/test_network_scanner.py`, `tests/test_scanner_api.py`, `tests/test_scanner_targets.py`, `tests/test_nvd_service.py`
 - Existing UI: `static/css/style.css`, `templates/base.html`, `templates/index.html`, `templates/404.html`, `templates/500.html`, `templates/register.html`, `templates/settings.html`, `templates/history.html`
 - Scanner UI detail: `static/js/network_scanner.js`
-- Documentation updates: `docs/ARCHITECTURE.md`, `docs/DATABASE_DESIGN.md`, `docs/INSTALLATION.md`, `docs/NETWORK_SCANNER.md`, `docs/SECURITY_DESIGN.md`, `README.md`, and this report
+- Documentation updates: `docs/ARCHITECTURE.md`, `docs/DATABASE_DESIGN.md`, `docs/INSTALLATION.md`, `docs/NETWORK_SCANNER.md`, `docs/SECURITY_DESIGN.md`, `docs/NMAP_WINDOWS_CONFIGURATION.md`, `README.md`, and this report
 
 ## New files
 
@@ -46,33 +47,36 @@ The scanner migrations add `network_scans`, `network_hosts`, `network_ports`, `d
 
 | Check | Result |
 |---|---|
-| Clean install of `requirements-lock.txt` and `requirements-dev.txt` in a fresh Python 3.11.7 venv | Passed |
-| `python -m pytest -q` | 103 passed |
+| Installed requirements against runtime, lock, and development pins | All 46 direct requirements present at matching versions |
+| `python -m pytest -q` | 104 passed |
 | `python -m compileall -q .` | Passed |
 | `python -m pip check` | No broken requirements |
 | `pip-audit -r requirements.txt` | No known vulnerabilities found |
 | `pip-audit -r requirements-lock.txt` | No known vulnerabilities found |
 | Existing SQLite database clone: upgrade, downgrade, re-upgrade | Passed; six legacy table counts preserved; source database untouched |
-| Nmap executable installation | **FAILED (acceptance blocker):** checks confirmed no executable in PATH or common install locations |
-| Python Nmap integration | **VERIFIED:** `python-nmap` 0.7.1 installed/importable in the fresh test venv |
-| Authenticated Flask preflight | **VERIFIED failure handling:** scanner page and empty history returned 200; health and authorized loopback scan returned 503; no scan was queued or persisted |
-| Real loopback scan, live details/history, live CSV/PDF | **NOT VERIFIED / BLOCKED:** no Nmap executable was available to run the test |
+| Nmap executable | **VERIFIED:** Nmap 7.993 installed and executable; `NMAP_PATH` configured for the current Windows user |
+| Python Nmap integration | **VERIFIED:** `python-nmap` 0.7.1 imports in the application's Python 3.11.7 environment |
+| Authenticated Flask health | **PASSED:** HTTP 200, operational; no executable path disclosed |
+| Real loopback scan and parsing | **PASSED:** actual Nmap process scanned only `127.0.0.1` TCP 22, 80, and 443; host up, all three ports closed |
+| Live persistence and history | **PASSED:** scan completed at 100%; one host, three port states, and authorization/start/completion audit events persisted in an isolated test database |
+| Live CSV/PDF reports | **PASSED:** CSV and PDF exports returned valid reports containing the observed port states |
+| Cancellation and ownership | **PASSED:** regression tests cover owner-only cancellation and subprocess termination; live cancellation was not needed for this fast localhost scan |
 | NVD/CVSS | Version-aware mocked parsing/classification and offline/rate-limit fallback tests passed; live NVD enrichment **NOT VERIFIED** |
 | Production configuration security regression tests | Passed: default production fail-closed, missing/weak secrets rejected, debug override rejected, secure cookies and debug-off verified |
-| Nmap installer provenance | **VERIFIED:** official installer signature valid (Nmap Software LLC) and SHA-256 matched the Nmap-published digest |
+| Nmap installer provenance | **VERIFIED during initial investigation:** official installer signature valid (Nmap Software LLC) and SHA-256 matched the Nmap-published digest; installer not executed |
 
-No uncontrolled network scan was performed. The authorized `127.0.0.1` request was stopped at Nmap preflight; it did not invoke Nmap.
+No external target was scanned. The only live assessment was the explicitly authorized, restricted `127.0.0.1` TCP-connect acceptance test described above.
 
-## Known limitations and remaining acceptance work
+## Residual limitations (not Phase 1 acceptance blockers)
 
-- The current Windows account (`DBX\adibs`) is not an administrator. The signed official Nmap 7.993 installer was verified but not executed; no Npcap driver, registry, or PATH settings were changed. Install Nmap from an administrator account, configure `NMAP_PATH` or PATH, and perform the limited `127.0.0.1` test described in `docs/NMAP_BLOCKER_ANALYSIS.md`.
-- Npcap is absent. It is not required for the implemented TCP connect (`-sT`) loopback profile, so it will not be installed unless raw-packet scanning is separately approved.
-- The pre-existing `.flaskenv` and `app_start.log` were tracked in the remote baseline; both are being removed from Git tracking. `.env.example` contains placeholders only, and the ignore rules exclude local environment files and logs.
-- The installer release number is 7.993; this is **not** an installed Nmap version. No executable path or installed version is available to report.
-- Real Nmap output parsing, live database persistence/history, and report generation remain unverified. Their unit/API paths passed only with mocked scanner output.
+- Nmap 7.993 was found through the current user's PATH; `NMAP_PATH` now points to the detected executable. The machine-specific path is not included in public documentation. No machine PATH, registry, or driver changes were made.
+- The Npcap service is running; Nmap reports build support for Npcap 1.90, but the installed driver version was not independently identified. Npcap is not required by the application's TCP connect (`-sT`) profile.
+- The tracked `.flaskenv` and `app_start.log` were removed from Git tracking. `.env.example` contains placeholders only, and ignore rules exclude local environment files and logs.
+- Live NVD enrichment was not exercised because no open, versioned service was present on localhost; NVD parsing, caching, rate-limit and offline behavior are covered by automated tests.
+- No interactive browser or mobile-device test was performed; the authenticated scanner page and full workflow were exercised over a local HTTP server.
 - The source project directory has no `.git` repository. Changes are published through a clean clone of the verified remote; see the final acceptance report for the latest `main` commit. The source directory itself remains a non-Git workspace.
 - The task executor, active-scan coordination, and NVD cache are process-local. Multiple WSGI workers require a shared queue and distributed coordination; queued scans do not survive process restarts.
 - Rate limiting defaults to in-memory storage; multi-worker deployments require shared storage.
 - Existing model retraining remains synchronous and available to authenticated users; restrict it or move it to an administrative task before multi-user production deployment.
 - Python 3.11.7 was verified; Python 3.12 was not tested.
-**Phase 1 remains INCOMPLETE** until Nmap is installed and the real local scan workflow succeeds. The Phase 1 implementation has been pushed to `main`. No Phase 2 work has been started.
+**Phase 1 is complete for the verified Windows/Python 3.11.7 environment.** No Phase 2 implementation has been started.

@@ -252,6 +252,17 @@ def test_worker_persists_service_and_potential_cve_and_exports_reports(
                     "source": "NVD keyword match",
                     "remediation": "Validate the vendor advisory.",
                 }],
+            }, {
+                "port": 80,
+                "protocol": "tcp",
+                "state": "closed",
+                "reason": "conn-refused",
+                "name": "http",
+                "product": None,
+                "version": None,
+                "extra_info": None,
+                "cpe": None,
+                "vulnerabilities": [],
             }],
         }])
         assert CVEReference.query.count() == 1
@@ -260,7 +271,10 @@ def test_worker_persists_service_and_potential_cve_and_exports_reports(
         ).one()
         assert finding.classification == "potential"
         assert NetworkHost.query.filter_by(scan_id=scan_id).count() == 1
-        assert NetworkPort.query.count() == 1
+        assert NetworkPort.query.count() == 2
+        assert VulnerabilityFinding.query.filter_by(
+            scan_id=scan_id, title="Open TCP port 80"
+        ).count() == 0
     details = authenticated_client.get(f"/api/scans/{scan_id}")
     assert details.status_code == 200
     assert details.json["scan"]["findings"][0]["classification"] in {
@@ -273,6 +287,8 @@ def test_worker_persists_service_and_potential_cve_and_exports_reports(
     csv_report = authenticated_client.get(f"/api/scans/{scan_id}/report.csv")
     assert csv_report.status_code == 200
     assert b"CVE-2099-1234" in csv_report.data
+    assert b",80,tcp,closed,http," in csv_report.data
+    assert b",443,tcp,open,https," in csv_report.data
     pdf_report = authenticated_client.get(f"/api/scans/{scan_id}/report.pdf")
     assert pdf_report.status_code == 200
     assert pdf_report.data.startswith(b"%PDF")

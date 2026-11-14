@@ -283,30 +283,41 @@ def export_scan_csv(scan_id):
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "Host", "Port", "Protocol", "Service", "Product", "Version",
+        "Host", "Port", "Protocol", "Port State", "Service", "Product", "Version",
         "Finding Type", "CVE", "Severity", "CVSS Score", "CVSS Version",
         "Description", "Remediation",
     ])
     findings = VulnerabilityFinding.query.filter_by(scan_id=scan.id).all()
+    findings_by_port = {}
     for finding in findings:
-        port = finding.port
-        service = port.service if port else None
-        values = [
-            port.host.address if port else "",
-            port.port if port else "",
-            port.protocol if port else "",
-            service.name if service else "",
-            service.product if service else "",
-            service.version if service else "",
-            finding.classification,
-            finding.cve_id or "",
-            finding.severity,
-            finding.cvss_score if finding.cvss_score is not None else "",
-            finding.cvss_version or "",
-            finding.description,
-            finding.remediation,
-        ]
-        writer.writerow([_safe_csv_cell(value) for value in values])
+        if finding.port_id is not None:
+            findings_by_port.setdefault(finding.port_id, []).append(finding)
+    for host in scan.hosts:
+        for port in host.ports:
+            service = port.service
+            port_findings = findings_by_port.get(port.id) or [None]
+            for finding in port_findings:
+                values = [
+                    host.address,
+                    port.port,
+                    port.protocol,
+                    port.state,
+                    service.name if service else "",
+                    service.product if service else "",
+                    service.version if service else "",
+                    finding.classification if finding else "",
+                    (finding.cve_id or "") if finding else "",
+                    finding.severity if finding else "",
+                    (
+                        finding.cvss_score
+                        if finding and finding.cvss_score is not None
+                        else ""
+                    ),
+                    (finding.cvss_version or "") if finding else "",
+                    finding.description if finding else "",
+                    finding.remediation if finding else "",
+                ]
+                writer.writerow([_safe_csv_cell(value) for value in values])
     buffer = io.BytesIO(output.getvalue().encode("utf-8-sig"))
     buffer.seek(0)
     return send_file(

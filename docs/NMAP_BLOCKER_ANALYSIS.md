@@ -20,7 +20,7 @@ Inspection was performed before changing the scanner or installing Nmap.
 
 ## Root cause
 
-At the initial verification, the existing virtual environments lacked `python-nmap`, the Nmap operating-system executable was absent, and the application only searched `PATH` with `shutil.which("nmap")`; it had no `NMAP_PATH` override, version probe, or health endpoint. The adapter, override, discovery, version probe, and health endpoint have since been implemented. `python-nmap` is now present in the dedicated test environment, but the actual Nmap executable remains absent.
+At the initial verification, the existing virtual environments lacked `python-nmap`, the Nmap operating-system executable was not discoverable from the current shell, and the application only searched `PATH` with `shutil.which("nmap")`; it had no `NMAP_PATH` override, version probe, or health endpoint. The adapter, override, discovery, version probe, and health endpoint have since been implemented. A later Windows inspection found Nmap installed in a directory present in the user's PATH, which the current shell had not inherited.
 
 There was a second independent blocker for the requested test: loopback targets were initially rejected regardless of explicit authorization and approved CIDRs. The implementation now has a default-off loopback opt-in requiring both authorization and an approved loopback CIDR; normal scanner defaults continue to reject loopback.
 
@@ -38,20 +38,23 @@ The official Nmap installation guide documents the Windows self-installer. Windo
 
 ## Resolution and verification record
 
-The signed official Windows installer was downloaded from `https://nmap.org/dist/nmap-7.993-setup.exe`. Authenticode verification returned **Valid**, publisher **Nmap Software LLC**, and SHA-256 `22E5928D1738A1B94FFD3643014F52CB87D467DBEC4CFF9E5F721FE0B3782F1B`, matching the digest published by Nmap. The installer was not executed: the current account `DBX\adibs` is not an administrator, and completing a system installation/Npcap driver setup would require elevation. No system PATH, registry, or driver settings were changed.
+During the initial blocker investigation, the official Windows installer was downloaded and verified: Authenticode **Valid**, publisher **Nmap Software LLC**, SHA-256 `22E5928D1738A1B94FFD3643014F52CB87D467DBEC4CFF9E5F721FE0B3782F1B`. It was not executed during that investigation. Later inspection found an already-installed executable and did not require an installer, elevation, or system configuration changes.
 
-A fresh Python 3.11.7 environment was created from `requirements-lock.txt` and `requirements-dev.txt`; `python-nmap` 0.7.1 is installed and importable there. Actual Nmap preflight reports `nmap.status=not_installed` and `python_integration.status=ready`. The configured PATH and common Program Files locations remain without Nmap. The authenticated Flask preflight returned HTTP 503 for health and scan start, HTTP 200 for the scanner page and empty history, and persisted no scan record. This was a safe failure-path test, **not** a real scan.
+The dedicated Python 3.11.7 environment contains `python-nmap` 0.7.1 and the pinned project dependencies. The initial Nmap absence report above is historical; a later inspection found Nmap on the current Windows user's PATH.
 
-The actual scanner executable path, Nmap version, Python-to-executable invocation, loopback scan output, persisted live results, live history, and live reports remain **NOT VERIFIED** because Nmap could not be installed under the current account.
+## Resolution and live acceptance (2026-11-14)
 
-The expanded test suite previously passed **97 tests**; the final configuration-hardening regression suite now passes **103 tests**. Compile, dependency consistency, dependency audits, and migration upgrade/downgrade/re-upgrade checks passed. These checks cover mocked scanner execution and do not substitute for the missing real Nmap scan.
+- Nmap was found through the Windows user's PATH; `nmap --version` returned **7.993** (32-bit Windows binary on Windows 11 Pro x64). The executable is installed and runs successfully.
+- The current agent shell had an older inherited PATH, so `NMAP_PATH` was explicitly set to the discovered executable at the Windows user environment scope and in the test process. No PATH, registry, driver, or security setting was changed. The machine-specific executable path is intentionally omitted from the public report.
+- The Npcap service is running; Nmap reports build support for Npcap 1.90, but the installed driver version was not independently identified. Npcap was not required by the TCP-connect scan profile (`-sT`).
+- The application Python environment imports `python-nmap` 0.7.1. Authenticated `GET /api/scans/health` returned HTTP 200 with Nmap 7.993 and integration 0.7.1, without disclosing the executable path.
+- An authenticated Flask HTTP workflow ran a real scan of only `127.0.0.1`, limited to TCP ports 22, 80, and 443 with the safe connect profile. Nmap reported the host up and all three ports closed (`conn-refused`); no open service or CVE finding was invented.
+- The application parsed and persisted all three closed port states, completed at 100%, wrote authorization/start/completion audit events, and returned the scan in history. CSV and PDF exports returned valid files and included the scan observations.
+- Existing scanner tests now retain closed/filtered port observations while creating vulnerability findings only for open ports. Hostname DNS answer counts are capped at `max_hosts`; the worker revalidates the same cap before execution.
+- Full suite: **104 passed**. Compilation, pip consistency, dependency audits, and disposable migration upgrade/downgrade/re-upgrade passed. Original application database was not used for the live test or migration test.
 
-### Manual installation needed
-
-1. From an administrator account, run the signed installer linked above and install Nmap. For this application's TCP connect profile, Npcap and registry performance changes are not required; do not install them unless separately approved.
-2. Set `NMAP_PATH` to the installed `nmap.exe` (commonly `C:\Program Files (x86)\Nmap\nmap.exe`) or add it to the Flask service account's PATH. Confirm `& $env:NMAP_PATH --version` and authenticated `GET /api/scans/health` report the version and `operational`.
-3. In a disposable test database only, set `BASTIONIX_APPROVED_NETWORKS=127.0.0.1/32` and `BASTIONIX_SCANNER_ALLOW_LOOPBACK=true`, then start Flask and submit an explicitly authorized scan for `127.0.0.1` with a small TCP port list. Remove the loopback settings afterward.
+No live NVD request was made because the authorized localhost scan found no open, versioned service requiring enrichment. NVD parsing, caching, rate-limit, and offline behavior remain covered by automated tests.
 
 ## Repository publication limitation
 
-The source project workspace contains no `.git` directory. A clean clone of the verified repository URL was used for publication; commit `2e8fc3b0e5163e77ebc5d0446b5121c8e670b92a` is pushed to `main`. The source project directory itself remains a non-Git workspace.
+The source project workspace contains no `.git` directory. A clean clone of the verified repository URL is used for publication. The source project directory itself remains a non-Git workspace.

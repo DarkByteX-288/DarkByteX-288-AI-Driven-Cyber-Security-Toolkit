@@ -93,7 +93,7 @@ Scans require authentication and a JSON request with `authorization_confirmed: t
 
 NVD matches are marked **potential**. A product/version keyword match does not establish that a specific build is affected or exploitable. Open-port records are informational. The scanner does not execute vulnerability scripts, exploit code, credential checks, stealth options, or denial-of-service tests. CVE checks are best effort and scans continue when NVD is unavailable or rate-limited.
 
-See [Network Scanner](docs/NETWORK_SCANNER.md), [Security Design](docs/SECURITY_DESIGN.md), and [Installation](docs/INSTALLATION.md) for deployment details and limitations.
+See [Network Scanner](docs/NETWORK_SCANNER.md), [Security Design](docs/SECURITY_DESIGN.md), and [Installation](docs/INSTALLATION.md) for deployment details and limitations. For Windows executable discovery, `NMAP_PATH` setup, and the verified localhost acceptance run, see [Nmap Windows Configuration](docs/NMAP_WINDOWS_CONFIGURATION.md) and the [Phase 1 final acceptance report](docs/PHASE_1_FINAL_ACCEPTANCE_REPORT.md).
 
 ## Repository and deployment
 

@@ -270,12 +270,16 @@ def normalize_results(records, progress_callback, cancel_event):
             "ports": [],
         }
         for port, details in (host_data.get("tcp", {}) or {}).items():
-            if details.get("state") != "open":
+            state = details.get("state", "unknown")
+            if state not in {
+                "open", "closed", "filtered", "unfiltered",
+                "open|filtered", "closed|filtered",
+            }:
                 continue
             service = {
                 "port": int(port),
                 "protocol": "tcp",
-                "state": details.get("state", "open"),
+                "state": state,
                 "reason": details.get("reason"),
                 "name": details.get("name"),
                 "product": details.get("product"),
@@ -298,7 +302,7 @@ def normalize_results(records, progress_callback, cancel_event):
     for index, (host, service) in enumerate(all_services, start=1):
         if cancel_event.is_set():
             raise ScanCancelled()
-        if service["product"] and service["version"]:
+        if service["state"] == "open" and service["product"] and service["version"]:
             key = (service["product"], service["version"])
             if key not in lookups:
                 if lookup_count >= MAX_NVD_LOOKUPS_PER_SCAN or time.monotonic() >= deadline:

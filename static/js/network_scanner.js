@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 addText(
                     section,
                     "p",
-                    `TCP ${port.port}: ${service.product || service.name || "unknown service"} ${service.version || ""}`.trim(),
+                    `TCP ${port.port} (${port.state}): ${service.product || service.name || "unknown service"} ${service.version || ""}`.trim(),
                     "mb-1"
                 );
             });

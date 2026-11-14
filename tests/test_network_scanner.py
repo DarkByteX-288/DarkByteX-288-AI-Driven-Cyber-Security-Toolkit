@@ -246,7 +246,7 @@ def test_scan_cancellation_terminates_process(monkeypatch):
     assert process.terminated
 
 
-def test_normalization_accepts_a_host_with_no_open_ports():
+def test_normalization_retains_closed_ports_without_treating_them_as_findings():
     result = network_scanner.normalize_results(
         {"scan": {
             "127.0.0.1": {
@@ -257,15 +257,15 @@ def test_normalization_accepts_a_host_with_no_open_ports():
         lambda *_: None,
         threading.Event(),
     )
-    assert result == [{
-        "address": "127.0.0.1",
-        "hostname": None,
-        "state": "up",
-        "ports": [],
-    }]
+    assert result[0]["address"] == "127.0.0.1"
+    assert result[0]["state"] == "up"
+    assert len(result[0]["ports"]) == 1
+    assert result[0]["ports"][0]["port"] == 1
+    assert result[0]["ports"][0]["state"] == "closed"
+    assert result[0]["ports"][0]["vulnerabilities"] == []
 
 
-def test_normalized_service_records_include_only_open_ports(monkeypatch):
+def test_normalized_service_records_include_open_and_closed_ports(monkeypatch):
     monkeypatch.setattr(
         network_scanner,
         "lookup_cves",
@@ -296,5 +296,9 @@ def test_normalized_service_records_include_only_open_ports(monkeypatch):
         lambda *_: None,
         threading.Event(),
     )
-    assert len(result[0]["ports"]) == 1
-    assert result[0]["ports"][0]["vulnerabilities"][0]["classification"] == "potential"
+    assert len(result[0]["ports"]) == 2
+    open_port, closed_port = result[0]["ports"]
+    assert open_port["state"] == "open"
+    assert open_port["vulnerabilities"][0]["classification"] == "potential"
+    assert closed_port["state"] == "closed"
+    assert closed_port["vulnerabilities"] == []

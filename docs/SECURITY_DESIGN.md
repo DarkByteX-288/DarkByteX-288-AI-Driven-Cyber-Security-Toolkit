@@ -8,11 +8,13 @@ Existing Flask-Login sessions and CSRF protection remain enabled. With no enviro
 
 - Private RFC1918 IPv4 and IPv6 ULA ranges are the default allowlist; additional networks must be explicitly configured by the operator. Loopback is separately rejected unless the operator both approves a loopback CIDR and enables `BASTIONIX_SCANNER_ALLOW_LOOPBACK`.
 - Hostname DNS answers are validated against the allowlist and revalidated in the background worker; the worker uses pinned IP literals, preventing a later DNS answer from redirecting the scan.
+- Unique addresses returned for a hostname are capped by the configured maximum host count during request validation and worker revalidation.
 - Loopback, link-local, reserved, unspecified, and multicast addresses are rejected.
 - Host, port, concurrency, user start rate, per-host timeout, total timeout, retry, and scanner argument sets are bounded.
 - Nmap's executable is verified separately. Commands use an argument list, fixed options, and `shell=False`; user-supplied command-line flags are not accepted.
 - The authenticated health endpoint independently reports Nmap executable and Python integration states, without returning the local executable path. The Windows-compatible TCP connect mode does not require raw packet privileges; loopback alone adds `-Pn`.
 - Nmap output is parsed with `python-nmap`. Cancellation terminates the active process.
+- Open, closed, and filtered TCP port states are recorded, but closed/filtered ports do not create vulnerability findings.
 - No exploit scripts, credential attacks, password cracking, stealth scanning, destructive checks, or denial-of-service profiles are implemented.
 
 ## Vulnerability intelligence
