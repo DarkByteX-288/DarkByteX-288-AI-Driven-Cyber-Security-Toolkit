@@ -2,99 +2,81 @@
 
 **Project:** BastionIX 1.0.0
 
-**Audit date:** 2026-11-14
+**Verification date:** 2026-11-14
 
-**GitHub:** `DarkByteX-288/DarkByteX-288-AI-Driven-Cyber-Security-Toolkit`, branch `main`
+**Repository:** `DarkByteX-288/DarkByteX-288-AI-Driven-Cyber-Security-Toolkit`
+
+**Branch:** `main`
 
 ## 1. Executive summary
 
-The Phase 1 application, scanner implementation, regression coverage, migrations, and documentation are published. A final security review found one high-severity production configuration issue; it has been fixed and regression-tested. Phase 1 remains **incomplete** because this Windows account cannot install the Nmap system executable, so the required real `127.0.0.1` workflow was not run. No mocked test is represented as a live scan.
+The Windows Nmap blocker is resolved. Nmap 7.993 was detected and executed, `NMAP_PATH` was configured for the current Windows user, and an authenticated Flask HTTP workflow completed a real, authorized TCP Connect scan of only `127.0.0.1`. The scan found the host up and ports 22, 80, and 443 closed. BastionIX parsed and persisted those observations, returned them in history, and generated CSV/PDF exports. No external targets or fabricated findings were used.
 
-## 2. Final architecture status
+## 2. Windows and Nmap status
 
-The existing Flask application factory and legacy features remain. HTTP blueprints call services and SQLAlchemy models; scanner execution uses bounded in-process background workers, fixed Nmap arguments, NVD enrichment, and owner-scoped persistence/reporting. The web application remains available for health/error reporting when the Nmap executable is absent.
+- **OS:** Windows 11 Pro x64, build 26200.
+- **Nmap:** installed and operational; `nmap --version` returned **7.993** (32-bit Windows executable).
+- **Executable discovery:** found through the Windows user's PATH. The detected full path is configured in the user's `NMAP_PATH`; its machine-specific value is intentionally omitted from this public report.
+- **PATH/configuration:** the user PATH already contained the Nmap directory, but the long-running agent shell had an older inherited PATH. `NMAP_PATH` was set at user scope and explicitly supplied to the application test process. No machine PATH, registry, driver, or security setting was changed.
+- **Npcap:** the Npcap service is running. Nmap reports build support for Npcap 1.90, but the installed driver version was not independently identified. Npcap is not required for the implemented `-sT` TCP Connect profile.
 
-## 3. Windows environment
+## 3. Python environment and dependencies
 
-- **OS:** Windows 11 Pro, 64-bit, build 26200; PowerShell 5.1.
-- **Permissions:** current account is not an administrator.
-- **Python:** 3.11.7. No active virtual environment is set in the PowerShell process. `.phase1-nmap-venv` is the tested environment; the existing `.venv` lacks the Python Nmap adapter.
-- **PATH/config:** no `nmap` command; `NMAP_PATH` is unset. Common Nmap paths were checked and absent. Existing PATH was not modified.
-- **Npcap:** no Npcap service, registry keys, or common installation directory were found. Npcap is not required by the application's TCP connect profile.
+No system `python`, `py`, or `pip` command was available on the long-running shell's PATH, and no virtual environment was active. The existing `.phase1-nmap-venv` was selected; its interpreter is Python **3.11.7**, and `python-nmap==0.7.1` imports and invokes the detected executable. Other existing virtual environments were left untouched.
 
-## 4. Nmap installation and version
+All **46** directly pinned requirements across runtime, lock, and development files were present at matching versions. Flask and required extensions, SQLAlchemy/Alembic, Python Nmap, pandas, ReportLab, scikit-learn, NumPy, Joblib, pytest, and pip-audit imports/versions were verified. No dependency manifest changes were needed.
 
-**FAILED / BLOCKED:** no Nmap executable is installed, so there is no installed executable path or Nmap version. The official Nmap 7.993 Windows installer was downloaded and verified: Authenticode status **Valid**, publisher **Nmap Software LLC**, SHA-256 `22E5928D1738A1B94FFD3643014F52CB87D467DBEC4CFF9E5F721FE0B3782F1B`. It was not executed because this account lacks administrator privileges. No driver, PATH, registry, or other system setting was changed.
+## 4. Flask integration and live scan
 
-An authorized administrator must install Nmap from [the official Nmap download page](https://nmap.org/download.html), then provide the installed path/version. Do not install Npcap for the supported `-sT` TCP-connect profile unless separately required and approved.
+The Flask application was started with an isolated in-memory test database and a temporary test account. The test-only configuration approved `127.0.0.1/32` and enabled loopback; no loopback exception was persisted to the user's deployment configuration.
 
-## 5. Python and Flask integration
+- Authenticated login and scanner page: **HTTP 200**.
+- Authenticated `GET /api/scans/health`: **HTTP 200**, `operational`, Nmap **7.993**, Python integration **0.7.1**. The response did not expose the executable path.
+- Authenticated scan request: **HTTP 202**. A real Nmap subprocess executed the fixed TCP Connect/service-detection profile (`-sT -sV --version-light -T3`) against `127.0.0.1`, ports 22, 80, and 443 only.
+- Nmap reported the host up; all three ports were **closed** with `conn-refused`. No open service or CVE finding was fabricated.
+- BastionIX parsed and persisted one host and three closed TCP port observations. The scan completed at **100%** with authorization, start, and completion audit events; history returned the result.
+- CSV export succeeded (**250 bytes**) and included the observed port states. PDF export succeeded (**2,374 bytes**) and included the port observations.
+- No external target was scanned. NVD live enrichment was not invoked because no open, versioned service was found.
 
-- `python-nmap` 0.7.1 imports in `.phase1-nmap-venv`.
-- **Python-to-Nmap invocation: NOT VERIFIED**, because the OS executable is absent.
-- Flask production startup and route registration were verified with a generated temporary secret; 28 routes registered.
-- An authenticated Flask test client returned HTTP 200 for `/network-scanner` and HTTP 503 for `/api/scans/health`, reporting `scanner=unavailable`, `nmap=not_installed`, and `python_integration=ready`. The health response did not expose a local executable path.
+## 5. Security review
 
-## 6. Real loopback scan evidence
-
-**NOT RUN / BLOCKED.** The authorized loopback request stopped at executable preflight with HTTP 503; no Nmap process started, scan was queued, or scan record was created. Therefore real Nmap parsing, progress, persistence/history, CSV/PDF exports from live results, and live cancellation remain unverified. No external targets were scanned and no findings were fabricated.
-
-## 7. Database verification
-
-The source SQLite database was inspected read-only at revision `20261114_0003`; it contains 2 users, 2 settings, 5 password analyses, 16 URL analyses, 30 attack logs, and 5 system logs. It was not modified.
-
-On a disposable copy, migration downgrade from `20261114_0003` to `20261114_0001` and upgrade back to head succeeded and preserved all six legacy table counts. A separate fresh disposable database upgraded to `20261114_0003` and contained the required scanner tables.
-
-## 8. Security audit
-
-The security review found one high-severity issue. **Fixed:** the application now defaults to production when no environment is selected, requires an environment-provided production key of at least 32 characters, rejects known development/test keys and `FLASK_DEBUG` overrides in production, forces debug off, and uses an ephemeral random key for development. The tracked `.flaskenv` and `app_start.log` were removed from Git; local environment files/logs are ignored. `.env.example` contains placeholders only.
+Security review identified a missing maximum-host check for multi-address DNS answers. The validator now caps unique resolved addresses at `max_hosts`, and the background worker revalidates the target before execution. The same change ensures host count limits apply to hostname targets as well as CIDRs.
 
 | # | Severity | File | Lines | Vulnerability | Confidence |
 |---|----------|------|-------|---------------|------------|
-| 1 | 🟠 HIGH | `app.py`, `config.py` | `app.py:34-53`; `config.py:75-82` | Previously, an unset environment selected debug development mode with a known signing key. **Fixed and regression-tested** with production fail-closed defaults, secret validation, and debug override rejection. | 8/10 |
+| 1 | 🟠 HIGH | `app.py`, `config.py` | `app.py:34-53`; `config.py:75-82` | Previously, an unset environment selected debug development mode with a known signing key. **Fixed and regression-tested** in `1350083669d83912eda6252bca12933a96a1ea2a`. | 8/10 |
+| 2 | 🟡 MEDIUM | `scanners/target_validation.py` | `139-140` | Hostname A/AAAA answers were checked for approved scope but not capped at `max_hosts`. **Fixed and regression-tested** in `c458ddc80f26c70eb15886378a81136e65999fee`. | 9/10 |
 
-Residual deployment limitations: the scan queue/cache and default rate limiter are process-local; synchronous model retraining remains available to authenticated users; production requires TLS and a hardened WSGI server. No live deployment was available for verification.
+No unresolved critical or high-severity issue was identified in the reviewed Nmap controls. Scanning continues to require authentication, explicit authorization, approved scope, DNS revalidation/pinned IPs, bounded host/port/concurrency/time limits, fixed argument lists with `shell=False`, and owner-scoped results/reports. Closed/filtered ports are observations only; vulnerability findings are emitted only for open ports.
 
-## 9. Automated test results
+## 6. Automated and frontend verification
 
-- `python -m pytest -q`: **103 passed**.
+- `python -m pytest -q`: **104 passed**.
 - `python -m compileall -q .`: passed.
-- Authentication, legacy-feature regression, scanner API/ownership, target validation, cancellation/error paths, mocked Nmap/NVD, CVE/CVSS, and report tests ran in the suite.
-- Tests use mocked Nmap/NVD responses. They do not verify an actual executable or live network scan.
-
-## 10. Dependency audit
-
-- Fresh Python 3.11.7 test environment installed from the pinned runtime and development requirements.
 - `python -m pip check`: no broken requirements.
-- `pip-audit -r requirements.txt`: no known vulnerabilities.
-- `pip-audit -r requirements-lock.txt`: no known vulnerabilities.
-- Python 3.12 was not tested.
+- `pip-audit -r requirements.txt` and `pip-audit -r requirements-lock.txt`: no known vulnerabilities.
+- Scanner target, ownership, cancellation, subprocess timeout/error, NVD/CVSS, and report regression tests passed. Mocked tests are not used as evidence for the live scan above.
+- `node --check static/js/network_scanner.js`: passed.
+- The scanner page and complete workflow were exercised over a local HTTP server. Interactive browser/mobile visual testing and live cancellation were not performed; cancellation behavior is covered by automated process/API tests.
 
-## 11. Migration verification
+## 7. Database and migration verification
 
-Existing-database copy downgrade/re-upgrade and fresh-database upgrade both passed at Alembic head `20261114_0003`. The original database remained untouched, and legacy row counts were preserved.
+The live scan used only an isolated in-memory database; the original user database was not used or modified. A disposable fresh SQLite database passed migration upgrade to `20261114_0003`, downgrade to `20261114_0001`, and upgrade back to head; temporary database files were cleaned. A prior disposable copy of the existing database also preserved the legacy table counts through upgrade/downgrade/re-upgrade.
 
-## 12. Frontend verification
+## 8. Documentation and GitHub
 
-Authenticated scanner page, login, and history/API behavior were exercised through Flask tests. CSV/PDF generation and authorization paths are covered by automated tests using controlled fixtures. No interactive browser or mobile-device verification was performed; live scan result display/export cannot be verified without Nmap.
+Updated README, `.env.example`, Windows Nmap configuration, blocker analysis, technical audit follow-up, network scanner/security design, and completion report. Public documentation omits the machine-specific executable path and contains no credentials.
 
-## 13. Documentation updates
+Implementation and supporting documentation are published to `main` in commit **`c458ddc80f26c70eb15886378a81136e65999fee`**. This acceptance report is included in the follow-up documentation commit. No force-push was used.
 
-README, `.env.example`, initial audit follow-up, installation, security design, network scanner, Nmap blocker analysis, and completion report were updated. This report records the remaining blockers and does not declare Phase 1 complete.
+## 9. Remaining limitations
 
-## 14. GitHub publication
+- NVD live enrichment was not exercised because no open, versioned service was present on localhost; NVD parsing, caching, rate-limit, and offline behavior passed automated tests.
+- No interactive browser/mobile test or real-process cancellation run was needed for the fast localhost scan; automated tests cover scanner cancellation and ownership.
+- Python 3.12 was not tested. Multi-worker deployment still requires shared task coordination and shared rate-limit storage; these are documented scaling constraints.
 
-The source project directory has no `.git` metadata. Changes were synchronized through a clean clone of the verified remote; no force-push was used. Production configuration hardening is in commit `1350083669d83912eda6252bca12933a96a1ea2a` on `main`. This acceptance report is published in a subsequent documentation commit.
+## 10. Phase 2 readiness decision
 
-## 15. Remaining blockers and required actions
+**A. PHASE 1 COMPLETE — READY FOR PHASE 2**
 
-1. An authorized administrator must install the verified official Nmap executable. The current account cannot install system software; no elevation was attempted.
-2. Set `NMAP_PATH` in the Flask process environment or make Nmap available on that service account's PATH, then verify `nmap --version` and authenticated scanner health reports operational.
-3. In a disposable test database, enable only the approved `127.0.0.1/32` loopback scope and loopback opt-in, then perform and verify the limited authorized TCP-connect scan, persisted result/history, reports, and cancellation.
-4. Live NVD availability, manual browser/mobile behavior, and multi-worker shared task/rate-limit infrastructure remain unverified or deployment concerns.
-
-## 16. Phase 2 readiness decision
-
-**B. PHASE 1 INCOMPLETE — NOT READY FOR PHASE 2**
-
-The mandatory real loopback scan and live-result persistence/report checks have not passed. Phase 2 implementation must not begin until the administrator install and controlled acceptance workflow succeed.
+All critical Phase 1 acceptance criteria were verified, including a real authorized localhost Nmap scan, persisted and accurately represented results, history, reports, security controls, dependency checks, regression tests, migrations, documentation, and publication to `main`. No Phase 2 implementation has been started.
