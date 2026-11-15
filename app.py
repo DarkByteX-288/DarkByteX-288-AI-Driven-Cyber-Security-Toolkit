@@ -94,6 +94,8 @@ def create_app(env=None):
     from routes.reports import reports_bp
     from routes.network_scanner import scanner_bp
     from routes.network_scanner_page import scanner_pages_bp
+    from routes.network_pages import network_pages_bp
+    from routes.attack_simulation import attack_simulation_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
@@ -104,6 +106,8 @@ def create_app(env=None):
     app.register_blueprint(reports_bp)
     app.register_blueprint(scanner_bp)
     app.register_blueprint(scanner_pages_bp)
+    app.register_blueprint(network_pages_bp)
+    app.register_blueprint(attack_simulation_bp)
     app.extensions["scan_submission_lock"] = threading.RLock()
     from tasks.scanner_tasks import init_scan_manager
     init_scan_manager(app)

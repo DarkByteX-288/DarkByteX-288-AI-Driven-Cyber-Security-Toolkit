@@ -1,226 +1,269 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - {{ app_name }}{% endblock %}
+{% block title %}Security Overview - {{ app_name }}{% endblock %}
 {% block content %}
+{% set posture_color = '#22c55e' if posture.label == 'Excellent' else ('#3b82f6' if posture.label == 'Good' else ('#f59e0b' if posture.label in ['Moderate', 'Limited coverage'] else ('#ef4444' if posture.label == 'Needs attention' else '#dc2626'))) %}
+<section class="page-heading">
+    <div>
+        <div class="eyebrow">BASTIONIX / SECURITY OPERATIONS</div>
+        <h1>Security overview</h1>
+        <p>Welcome back, {{ current_user.username }}. Review assessments and authorized network activity in your account.</p>
+        <div class="data-note mt-2"><i class="fa-regular fa-clock"></i> Updated {{ updated_at.strftime('%b %d, %Y · %H:%M UTC') }}</div>
+    </div>
+    <div class="heading-actions">
+        <form method="GET" class="d-flex gap-2">
+            <label class="visually-hidden" for="dashboard-range">Dashboard time range</label>
+            <select class="form-select" id="dashboard-range" name="range" aria-label="Dashboard time range">
+                <option value="24h" {{ 'selected' if time_range == '24h' else '' }}>Last 24 hours</option>
+                <option value="7d" {{ 'selected' if time_range == '7d' else '' }}>Last 7 days</option>
+                <option value="30d" {{ 'selected' if time_range == '30d' else '' }}>Last 30 days</option>
+                <option value="all" {{ 'selected' if time_range == 'all' else '' }}>All time</option>
+            </select>
+            <button type="submit" class="btn btn-cyber-outline" aria-label="Apply time range"><i class="fa-solid fa-filter"></i></button>
+        </form>
+        <a class="btn btn-cyber-outline" href="{{ url_for('main.dashboard', range=time_range) }}" aria-label="Refresh dashboard"><i class="fa-solid fa-rotate-right"></i></a>
+        <a class="btn btn-cyber" href="{{ url_for('reports.security_pdf') }}"><i class="fa-solid fa-file-arrow-down"></i> Export report</a>
+    </div>
+</section>
 
-<h3 class="mb-4"><i class="fa-solid fa-gauge-high"></i> Security Dashboard</h3>
+<section class="row g-3 mb-4" aria-label="Security summary">
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="#posture">
+            <span class="stat-icon icon-cyan"><i class="fa-solid fa-shield-halved"></i></span>
+            <span><span class="stat-label">Posture score</span><strong class="stat-value">{{ posture.score if posture.score is not none else '—' }}{% if posture.score is not none %}<small>%</small>{% endif %}</strong><span class="stat-support">{{ posture.label }}</span></span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="{{ url_for('history.history') }}">
+            <span class="stat-icon icon-blue"><i class="fa-solid fa-clipboard-check"></i></span>
+            <span><span class="stat-label">Assessments</span><strong class="stat-value">{{ stats.total_assessments }}</strong><span class="stat-support">Password, URL and scan records</span></span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="{{ url_for('network_pages.scan_history') }}">
+            <span class="stat-icon icon-cyan"><i class="fa-solid fa-network-wired"></i></span>
+            <span><span class="stat-label">Network scans</span><strong class="stat-value">{{ stats.total_scans }}</strong><span class="stat-support">{{ stats.completed_scans }} completed · {{ stats.failed_scans }} failed</span></span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="{{ url_for('network_pages.vulnerabilities') }}">
+            <span class="stat-icon icon-orange"><i class="fa-solid fa-bug"></i></span>
+            <span><span class="stat-label">Findings</span><strong class="stat-value">{{ stats.total_findings }}</strong><span class="stat-support">Potential matches are not confirmations</span></span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="{{ url_for('network_pages.vulnerabilities', severity='critical') }}">
+            <span class="stat-icon icon-critical"><i class="fa-solid fa-triangle-exclamation"></i></span>
+            <span><span class="stat-label">Critical findings</span><strong class="stat-value">{{ stats.critical_findings }}</strong><span class="stat-support">Review owner-scoped results</span></span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="{{ url_for('url.url_checker') }}">
+            <span class="stat-icon icon-red"><i class="fa-solid fa-link"></i></span>
+            <span><span class="stat-label">URLs analyzed</span><strong class="stat-value">{{ stats.total_url }}</strong><span class="stat-support">{{ stats.phishing_urls }} phishing · {{ stats.suspicious_urls }} suspicious</span></span>
+        </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-3">
+        <a class="stat-card h-100" href="{{ url_for('password.password_checker') }}">
+            <span class="stat-icon icon-green"><i class="fa-solid fa-key"></i></span>
+            <span><span class="stat-label">Password checks</span><strong class="stat-value">{{ stats.total_password }}</strong><span class="stat-support">{{ stats.weak_passwords }} weak assessments</span></span>
+        </a>
+    </div>
+</section>
 
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-blue"><i class="fa-solid fa-key"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.total_password }}</div>
-                <div class="stat-label">Password Analyses</div>
+<section class="row g-3 mb-4">
+    <div class="col-xl-5" id="posture">
+        <article class="cyber-card posture-card">
+            <div class="section-title">
+                <h2>Security posture</h2>
+                <span class="status-pill {{ 'status-warning' if posture.coverage < 2 else 'status-info' }}">{{ posture.coverage }}/3 data domains</span>
             </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-cyan"><i class="fa-solid fa-link"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.total_url }}</div>
-                <div class="stat-label">URL Analyses</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.weak_passwords }}</div>
-                <div class="stat-label">Weak Passwords</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-green"><i class="fa-solid fa-lock"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.strong_passwords }}</div>
-                <div class="stat-label">Strong Passwords</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-red"><i class="fa-solid fa-fish-fins"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.phishing_urls }}</div>
-                <div class="stat-label">Phishing URLs</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-green"><i class="fa-solid fa-check-shield"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.safe_urls }}</div>
-                <div class="stat-label">Safe URLs</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-orange"><i class="fa-solid fa-chart-line"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.avg_score }}</div>
-                <div class="stat-label">Avg Password Score</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-lg-3">
-        <div class="stat-card">
-            <div class="stat-icon icon-cyan"><i class="fa-solid fa-shield-halved"></i></div>
-            <div>
-                <div class="stat-value">{{ stats.security_score }}%</div>
-                <div class="stat-label">Security Score</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-lg-4">
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-chart-pie"></i> Password Strength Distribution</h6>
-            <canvas id="pwdCategoryChart" height="220"></canvas>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-chart-bar"></i> URL Verdict Distribution</h6>
-            <canvas id="urlVerdictChart" height="220"></canvas>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="cyber-card text-center">
-            <h6 class="mb-3"><i class="fa-solid fa-gauge"></i> Overall Security Score</h6>
-            <div class="circular-meter">
-                <svg width="140" height="140" viewBox="0 0 140 140">
-                    <circle cx="70" cy="70" r="60" stroke="var(--border-color)" stroke-width="12" fill="none"/>
-                    <circle id="securityScoreCircle" cx="70" cy="70" r="60" stroke="var(--accent-green)" stroke-width="12" fill="none"
-                            stroke-linecap="round" stroke-dasharray="{{ 2 * 3.14159 * 60 }}" stroke-dashoffset="{{ 2 * 3.14159 * 60 }}"/>
-                </svg>
-                <div class="circular-meter-label">
-                    <div class="circular-meter-value">{{ stats.security_score }}%</div>
-                    <div class="circular-meter-caption">System Status</div>
+            <p class="data-note">A score from available BastionIX assessments—not a certification or a measure of your entire environment.</p>
+            <div class="posture-score-wrap mt-3">
+                <div class="circular-meter" role="img" aria-label="Security posture score {{ posture.score if posture.score is not none else 'unavailable' }}">
+                    <svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
+                        <circle cx="75" cy="75" r="63" stroke="var(--border-color)" stroke-width="10" fill="none"/>
+                        {% if posture.score is not none %}
+                        <circle cx="75" cy="75" r="63" stroke="{{ posture_color }}" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="{{ 2 * 3.14159 * 63 }}" stroke-dashoffset="{{ (2 * 3.14159 * 63) * (1 - posture.score / 100) }}"/>
+                        {% endif %}
+                    </svg>
+                    <div class="circular-meter-label">
+                        <strong class="circular-meter-value">{{ posture.score if posture.score is not none else '—' }}</strong>
+                        <span class="circular-meter-caption">{% if posture.score is not none %}out of 100{% else %}no assessments{% endif %}</span>
+                    </div>
+                </div>
+                <div class="factor-list">
+                    {% for factor in posture.factors %}
+                    <div class="factor-row">
+                        <span>{{ factor.name }}</span><strong>{{ factor.score }}%</strong>
+                        <div class="risk-meter"><div class="risk-meter-fill" style="width:{{ factor.score }}%;background:{{ posture_color }}"></div></div>
+                        <small>{{ factor.detail }}</small>
+                    </div>
+                    {% else %}
+                    <div class="empty-state py-3"><p>No assessment data is available for this period. A missing assessment is not treated as a zero-risk result.</p></div>
+                    {% endfor %}
                 </div>
             </div>
-            <p class="mt-3 mb-0" style="color: var(--text-secondary);">
-                {% if stats.security_score >= 80 %}
-                    <span class="badge badge-cyber" style="background: rgba(33,201,138,0.15); color: var(--accent-green);">Excellent</span>
-                {% elif stats.security_score >= 50 %}
-                    <span class="badge badge-cyber" style="background: rgba(247,169,52,0.15); color: var(--accent-orange);">Needs Attention</span>
-                {% else %}
-                    <span class="badge badge-cyber" style="background: rgba(239,68,68,0.15); color: var(--accent-red);">At Risk</span>
-                {% endif %}
-            </p>
-        </div>
+            <div class="mt-3"><span class="status-pill" style="color:{{ posture_color }};border-color:{{ posture_color }}">{{ posture.label }}</span><span class="data-note ms-2">Weighted score across available domains only.</span></div>
+        </article>
     </div>
-</div>
+    <div class="col-xl-7">
+        <article class="cyber-card h-100">
+            <div class="section-title">
+                <div><h2>Vulnerability severity</h2><p class="data-note mb-0">Potential CVE matches require independent validation.</p></div>
+                <a href="{{ url_for('network_pages.vulnerabilities') }}">Manage findings <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+            {% if stats.total_findings %}
+            <div class="chart-wrap"><canvas id="vulnerabilityChart" aria-label="Vulnerability findings by severity"></canvas></div>
+            {% else %}
+            <div class="empty-state"><i class="fa-solid fa-shield"></i><h3>No vulnerability findings</h3><p>No findings have been recorded in this time range. This does not imply that unscanned assets are free of risk.</p><a class="btn btn-cyber-outline btn-sm" href="{{ url_for('scanner_pages.network_scanner') }}">Start an authorized scan</a></div>
+            {% endif %}
+        </article>
+    </div>
+</section>
 
-<div class="row g-4">
+<section class="row g-3 mb-4" aria-label="Security analytics">
     <div class="col-lg-6">
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-clock-rotate-left"></i> Recent Password Analyses</h6>
-            {% if recent_pwd %}
+        <article class="cyber-card h-100">
+            <div class="section-title"><h2>Network security</h2><a href="{{ url_for('network_pages.scan_history') }}">Scan history</a></div>
+            <div class="row g-2 mb-3">
+                <div class="col-4"><div class="data-note">Completed</div><strong>{{ stats.completed_scans }}</strong></div>
+                <div class="col-4"><div class="data-note">Open ports</div><strong>{{ stats.open_ports }}</strong></div>
+                <div class="col-4"><div class="data-note">Services</div><strong>{{ stats.service_discoveries }}</strong></div>
+            </div>
+            {% if stats.total_scans %}<div class="chart-wrap"><canvas id="networkChart" aria-label="Network scan status distribution"></canvas></div>
+            {% else %}<div class="empty-state py-3"><p>No network scans in this period.</p><a class="btn btn-cyber-outline btn-sm" href="{{ url_for('scanner_pages.network_scanner') }}">Open scanner</a></div>{% endif %}
+        </article>
+    </div>
+    <div class="col-lg-6">
+        <article class="cyber-card h-100">
+            <div class="section-title"><h2>Password security</h2><a href="{{ url_for('password.password_checker') }}">Assess a password</a></div>
+            <div class="row g-2 mb-3">
+                <div class="col-4"><div class="data-note">Weak</div><strong>{{ stats.weak_passwords }}</strong></div>
+                <div class="col-4"><div class="data-note">Moderate</div><strong>{{ stats.moderate_passwords }}</strong></div>
+                <div class="col-4"><div class="data-note">Strong</div><strong>{{ stats.strong_passwords }}</strong></div>
+            </div>
+            {% if stats.total_password %}<div class="chart-wrap"><canvas id="passwordChart" aria-label="Password assessment strength distribution"></canvas></div>
+            {% else %}<div class="empty-state py-3"><p>No password assessments in this period.</p><a class="btn btn-cyber-outline btn-sm" href="{{ url_for('password.password_checker') }}">Assess a password</a></div>{% endif %}
+        </article>
+    </div>
+    <div class="col-lg-6">
+        <article class="cyber-card h-100">
+            <div class="section-title"><h2>Phishing detection</h2><a href="{{ url_for('url.url_checker') }}">Analyze a URL</a></div>
+            <div class="row g-2 mb-3">
+                <div class="col-4"><div class="data-note">Phishing</div><strong>{{ stats.phishing_urls }}</strong></div>
+                <div class="col-4"><div class="data-note">Suspicious</div><strong>{{ stats.suspicious_urls }}</strong></div>
+                <div class="col-4"><div class="data-note">Safe verdict</div><strong>{{ stats.safe_urls }}</strong></div>
+            </div>
+            {% if stats.total_url %}<div class="chart-wrap"><canvas id="urlChart" aria-label="URL classification distribution"></canvas></div>
+            {% else %}<div class="empty-state py-3"><p>No URL analyses in this period.</p><a class="btn btn-cyber-outline btn-sm" href="{{ url_for('url.url_checker') }}">Analyze a URL</a></div>{% endif %}
+        </article>
+    </div>
+    <div class="col-lg-6">
+        <article class="cyber-card h-100">
+            <div class="section-title"><h2>Vulnerability intelligence</h2><a href="{{ url_for('network_pages.vulnerabilities') }}">Review findings</a></div>
+            {% if chart_data.service_labels %}<div class="chart-wrap"><canvas id="serviceChart" aria-label="Affected services identified in findings"></canvas></div>
+            {% else %}<div class="empty-state py-3"><p>No service-linked vulnerability findings are available for this period.</p></div>{% endif %}
+            <p class="data-note">Remediation status is not tracked by the current database schema.</p>
+            <h3 class="h6 mt-3">Top CVE references</h3>
+            {% if chart_data.cve_labels %}<div class="chart-wrap"><canvas id="cveChart" aria-label="Top CVE identifiers by finding count"></canvas></div>
+            {% else %}<p class="data-note mb-0">No CVE identifiers are attached to findings in this period.</p>{% endif %}
+        </article>
+    </div>
+</section>
+
+<section class="row g-3 mb-4">
+    <div class="col-xl-7">
+        <article class="cyber-card h-100">
+            <div class="section-title"><h2>Recent network scans</h2><a href="{{ url_for('network_pages.scan_history') }}">View all scans</a></div>
+            {% if recent_scans %}
             <div class="table-responsive">
-                <table class="table table-cyber table-sm">
-                    <thead><tr><th>Date</th><th>Category</th><th>Score</th><th>Crack Time</th></tr></thead>
-                    <tbody>
-                        {% for a in recent_pwd %}
+                <table class="table table-cyber">
+                    <thead><tr><th>Scan</th><th>Target</th><th>Hosts</th><th>Open ports</th><th>Findings</th><th>Status</th><th></th></tr></thead>
+                    <tbody>{% for scan in recent_scans %}
+                        {% set totals = namespace(open_ports=0) %}
+                        {% for host in scan.hosts %}{% for port in host.ports %}{% if port.state == 'open' %}{% set totals.open_ports = totals.open_ports + 1 %}{% endif %}{% endfor %}{% endfor %}
                         <tr>
-                            <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>{{ a.strength_category }}</td>
-                            <td>{{ a.strength_score }}/100</td>
-                            <td>{{ a.estimated_crack_time_display or '—' }}</td>
+                            <td>#{{ scan.id }}<div class="data-note">{{ scan.created_at.strftime('%b %d, %H:%M') }}</div></td>
+                            <td>{{ scan.target }}</td><td>{{ scan.hosts|length }}</td><td>{{ totals.open_ports }}</td><td>{{ scan.findings|length }}</td>
+                            <td><span class="status-pill {{ 'status-success' if scan.status == 'completed' else ('status-danger' if scan.status == 'failed' else ('status-warning' if scan.status in ['queued', 'running'] else 'status-neutral')) }}">{{ scan.status|title }}</span></td>
+                            <td><a href="{{ url_for('scanner_pages.network_scanner', scan_id=scan.id) }}" aria-label="View scan {{ scan.id }}"><i class="fa-solid fa-arrow-up-right-from-square"></i></a></td>
                         </tr>
-                        {% endfor %}
-                    </tbody>
+                    {% endfor %}</tbody>
                 </table>
             </div>
             {% else %}
-            <p style="color: var(--text-secondary);">No password analyses yet. <a href="{{ url_for('password.password_checker') }}">Run one now</a>.</p>
+            <div class="empty-state"><i class="fa-solid fa-network-wired"></i><h3>No scans yet</h3><p>Run a limited, authorized assessment against an asset within approved scope.</p><a class="btn btn-cyber" href="{{ url_for('scanner_pages.network_scanner') }}">Configure a scan</a></div>
             {% endif %}
-        </div>
+        </article>
     </div>
-    <div class="col-lg-6">
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-clock-rotate-left"></i> Recent URL Analyses</h6>
-            {% if recent_url %}
-            <div class="table-responsive">
-                <table class="table table-cyber table-sm">
-                    <thead><tr><th>Date</th><th>Domain</th><th>Verdict</th><th>Threat</th></tr></thead>
-                    <tbody>
-                        {% for a in recent_url %}
-                        <tr>
-                            <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>{{ a.domain }}</td>
-                            <td>{{ a.verdict }}</td>
-                            <td>{{ a.threat_level }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="col-xl-5" id="recommendations">
+        <article class="cyber-card h-100">
+            <div class="section-title"><h2>Security recommendations</h2><span class="data-note">Based on your records</span></div>
+            {% for item in recommendations %}
+            <div class="recommendation-item">
+                <span class="recommendation-icon"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
+                <div>
+                    <h3>{{ item.title }} <span class="status-pill {{ 'status-danger' if item.priority|lower in ['critical', 'high'] else 'status-warning' }}">{{ item.priority }}</span></h3>
+                    <p>{{ item.reason }}</p><small>{{ item.action }}</small>
+                    <div><a href="{{ item.href }}" class="small">Review related module <i class="fa-solid fa-arrow-right"></i></a></div>
+                </div>
             </div>
             {% else %}
-            <p style="color: var(--text-secondary);">No URL analyses yet. <a href="{{ url_for('url.url_checker') }}">Run one now</a>.</p>
-            {% endif %}
-        </div>
+            <div class="empty-state"><i class="fa-solid fa-circle-check"></i><h3>No recommendations from current records</h3><p>Recommendations appear when assessments or scans record actionable findings. This is not a guarantee of system security.</p></div>
+            {% endfor %}
+        </article>
     </div>
-</div>
+</section>
 
-<div class="text-end mt-3">
-    <a href="{{ url_for('reports.security_pdf') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-pdf"></i> Download Security Report (PDF)</a>
-</div>
-
+<section class="cyber-card">
+    <div class="section-title"><h2>Recent security activity</h2><a href="{{ url_for('history.history') }}">Analysis history</a></div>
+    {% if activity %}
+    <div class="table-responsive">
+        <table class="table table-cyber">
+            <thead><tr><th>Activity</th><th>Description</th><th>Module</th><th>Status</th><th>Date and time</th></tr></thead>
+            <tbody>{% for item in activity %}
+                <tr><td><span class="activity-dot"></span><strong>{{ item.kind }}</strong></td><td>{{ item.description }}</td><td>{{ item.module }}</td><td><span class="status-pill status-success">{{ item.status }}</span></td><td>{{ item.created_at.strftime('%b %d, %Y · %H:%M') }}</td></tr>
+            {% endfor %}</tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state"><i class="fa-solid fa-chart-line"></i><h3>Welcome to your security workspace</h3><p>Your activity will appear here after you run an assessment. Start with a password check, URL analysis, or authorized network scan.</p><div class="d-flex flex-wrap justify-content-center gap-2"><a class="btn btn-cyber-outline" href="{{ url_for('password.password_checker') }}">Password assessment</a><a class="btn btn-cyber-outline" href="{{ url_for('url.url_checker') }}">Phishing analysis</a><a class="btn btn-cyber" href="{{ url_for('scanner_pages.network_scanner') }}">Network scan</a></div></div>
+    {% endif %}
+</section>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-const chartData = {{ chart_data | safe }};
-const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-const textColor = isDark ? '#8b96a8' : '#5b6779';
-
-new Chart(document.getElementById('pwdCategoryChart'), {
-    type: 'pie',
-    data: {
-        labels: chartData.category_labels.length ? chartData.category_labels : ['No data'],
-        datasets: [{
-            data: chartData.category_values.length ? chartData.category_values : [1],
-            backgroundColor: ['#ef4444', '#f7a934', '#f7d774', '#21c98a', '#26d3d3'],
-            borderColor: 'transparent',
-        }]
-    },
-    options: { plugins: { legend: { labels: { color: textColor } } } }
-});
-
-new Chart(document.getElementById('urlVerdictChart'), {
-    type: 'bar',
-    data: {
-        labels: chartData.verdict_labels.length ? chartData.verdict_labels : ['No data'],
-        datasets: [{
-            label: 'Count',
-            data: chartData.verdict_values.length ? chartData.verdict_values : [0],
-            backgroundColor: ['#21c98a', '#f7a934', '#ef4444'],
-        }]
-    },
-    options: {
-        plugins: { legend: { display: false } },
-        scales: {
-            x: { ticks: { color: textColor }, grid: { color: gridColor } },
-            y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true }
-        }
-    }
-});
-
-// Animate the security score ring
-const circle = document.getElementById('securityScoreCircle');
-const radius = 60;
-const circumference = 2 * Math.PI * radius;
-const score = {{ stats.security_score }};
-const offset = circumference - (score / 100) * circumference;
-setTimeout(() => { circle.style.transition = 'stroke-dashoffset 1s ease'; circle.style.strokeDashoffset = offset; }, 100);
+(() => {
+    const data = {{ chart_data|tojson }};
+    const text = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+    const grid = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
+    const palette = ['#dc2626', '#ef4444', '#f59e0b', '#22c55e', '#22d3ee'];
+    const base = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: text, usePointStyle: true, boxWidth: 8 } } } };
+    const doughnut = (id, labels, values, colors) => {
+        const node = document.getElementById(id);
+        if (!node) return null;
+        return new Chart(node, { type: 'doughnut', data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] }, options: { ...base, cutout: '68%' } });
+    };
+    const bars = (id, labels, values, colors, onClick) => {
+        const node = document.getElementById(id);
+        if (!node) return null;
+        return new Chart(node, { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 5, maxBarThickness: 36 }] }, options: { ...base, plugins: { ...base.plugins, legend: { display: false } }, scales: { x: { ticks: { color: text }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: text, precision: 0 }, grid: { color: grid } } }, onClick } });
+    };
+    doughnut('networkChart', data.scan_labels, data.scan_values, ['#3b82f6', '#22c55e', '#ef4444', '#64748b', '#f59e0b']);
+    doughnut('passwordChart', data.category_labels, data.category_values, ['#dc2626', '#ef4444', '#f59e0b', '#22c55e', '#22d3ee']);
+    bars('urlChart', data.verdict_labels, data.verdict_values, ['#22c55e', '#f59e0b', '#ef4444', '#64748b']);
+    bars('vulnerabilityChart', data.vulnerability_labels, data.vulnerability_values, palette, (_event, elements, chart) => {
+        if (!elements.length) return;
+        const severity = chart.data.labels[elements[0].index].toLowerCase();
+        window.location.assign(`/vulnerabilities?severity=${encodeURIComponent(severity)}`);
+    });
+    bars('serviceChart', data.service_labels, data.service_values, '#3b82f6');
+    bars('cveChart', data.cve_labels, data.cve_values, '#f59e0b', (_event, elements, chart) => {
+        if (!elements.length) return;
+        const cve = chart.data.labels[elements[0].index];
+        window.location.assign(`/vulnerabilities?q=${encodeURIComponent(cve)}`);
+    });
+})();
 </script>
 {% endblock %}

@@ -1,89 +1,92 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="{{ current_user.settings.theme if current_user.is_authenticated and current_user.settings else 'dark' }}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="{{ app_tagline }}">
     <meta name="application-name" content="{{ app_name }}">
-    <meta property="og:title" content="{{ app_name }} - {{ app_description }}">
-    <meta property="og:description" content="{{ app_tagline }}">
-    <meta name="theme-color" content="#0a0e14">
+    <meta name="theme-color" content="#0B1220">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}{{ app_name }}{% endblock %}</title>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-
-<nav class="navbar navbar-expand-lg cyber-navbar sticky-top">
-    <div class="container-fluid px-4">
-        <a class="navbar-brand cyber-brand" href="{{ url_for('main.index') }}">
-            <i class="fa-solid fa-shield-halved"></i> {{ app_name }}
+{% if current_user.is_authenticated %}
+<div class="app-shell">
+    <div class="sidebar-backdrop" data-sidebar-close></div>
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Primary navigation">
+        <a class="brand-lockup" href="{{ url_for('main.dashboard') }}">
+            <span class="brand-mark"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span>
+            <span><strong>BASTION<span>IX</span></strong><small>SECURITY INTELLIGENCE</small></span>
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMain">
-            {% if current_user.is_authenticated %}
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('main.dashboard') }}"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('password.password_checker') }}"><i class="fa-solid fa-key"></i> Password Checker</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('url.url_checker') }}"><i class="fa-solid fa-link"></i> URL Checker</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('scanner_pages.network_scanner') }}"><i class="fa-solid fa-network-wired"></i> Network Scanner</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('history.history') }}"><i class="fa-solid fa-clock-rotate-left"></i> History</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('settings.settings') }}"><i class="fa-solid fa-gear"></i> Settings</a></li>
-            </ul>
-            <ul class="navbar-nav">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fa-solid fa-user-shield"></i> {{ current_user.username }}
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end cyber-dropdown">
-                        <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="fa-solid fa-id-badge"></i> Profile</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form method="POST" action="{{ url_for('auth.logout') }}">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button class="dropdown-item" type="submit"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
-                            </form>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-            {% else %}
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.login') }}"><i class="fa-solid fa-right-to-bracket"></i> Sign In</a></li>
-                <li class="nav-item"><a class="nav-link btn btn-cyber-outline ms-2 px-3" href="{{ url_for('auth.register') }}"><i class="fa-solid fa-user-plus"></i> Register</a></li>
-            </ul>
-            {% endif %}
+        <nav class="sidebar-nav">
+            <span class="nav-caption">OVERVIEW</span>
+            <a class="side-link {{ 'active' if request.endpoint == 'main.dashboard' else '' }}" href="{{ url_for('main.dashboard') }}"><i class="fa-solid fa-grid-2"></i><span>Dashboard</span></a>
+            <span class="nav-caption">SECURITY</span>
+            <a class="side-link {{ 'active' if request.endpoint == 'password.password_checker' else '' }}" href="{{ url_for('password.password_checker') }}"><i class="fa-solid fa-key"></i><span>Password Security</span></a>
+            <a class="side-link {{ 'active' if request.endpoint == 'attack_simulation.attack_simulation' else '' }}" href="{{ url_for('attack_simulation.attack_simulation') }}"><i class="fa-solid fa-bolt"></i><span>Attack Simulation</span></a>
+            <a class="side-link {{ 'active' if request.endpoint == 'url.url_checker' else '' }}" href="{{ url_for('url.url_checker') }}"><i class="fa-solid fa-link"></i><span>Phishing Detection</span></a>
+            <span class="nav-caption">NETWORK</span>
+            <a class="side-link {{ 'active' if request.endpoint == 'scanner_pages.network_scanner' else '' }}" href="{{ url_for('scanner_pages.network_scanner') }}"><i class="fa-solid fa-network-wired"></i><span>Network Scanner</span></a>
+            <a class="side-link {{ 'active' if request.endpoint == 'network_pages.vulnerabilities' else '' }}" href="{{ url_for('network_pages.vulnerabilities') }}"><i class="fa-solid fa-bug"></i><span>Vulnerability Management</span></a>
+            <a class="side-link {{ 'active' if request.endpoint == 'network_pages.scan_history' or request.endpoint == 'history.history' else '' }}" href="{{ url_for('network_pages.scan_history') }}"><i class="fa-solid fa-clock-rotate-left"></i><span>Scan History</span></a>
+            <span class="nav-caption">MANAGEMENT</span>
+            <a class="side-link {{ 'active' if request.endpoint in ['reports.report_center', 'reports.password_csv', 'reports.url_csv', 'reports.security_pdf', 'reports.vulnerability_csv'] else '' }}" href="{{ url_for('reports.report_center') }}"><i class="fa-solid fa-file-lines"></i><span>Reports</span></a>
+            <a class="side-link {{ 'active' if request.endpoint in ['settings.settings', 'auth.profile'] else '' }}" href="{{ url_for('settings.settings') }}"><i class="fa-solid fa-sliders"></i><span>Settings</span></a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a class="side-link" href="{{ url_for('auth.profile') }}"><span class="user-avatar">{{ current_user.username[:1]|upper }}</span><span class="user-label"><strong>{{ current_user.username }}</strong><small>Account profile</small></span><i class="fa-solid fa-arrow-up-right-from-square profile-arrow"></i></a>
+            <form method="POST" action="{{ url_for('settings.update_theme') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="theme" value="{{ 'light' if current_user.settings and current_user.settings.theme == 'dark' else 'dark' }}">
+                <button class="side-link theme-switch" type="submit"><i class="fa-regular {{ 'fa-sun' if current_user.settings and current_user.settings.theme == 'dark' else 'fa-moon' }}"></i><span>Switch to {{ 'light' if current_user.settings and current_user.settings.theme == 'dark' else 'dark' }} theme</span></button>
+            </form>
         </div>
+    </aside>
+    <div class="app-main">
+        <header class="topbar">
+            <button type="button" class="icon-button sidebar-toggle" aria-label="Toggle navigation" aria-controls="app-sidebar" aria-expanded="false" data-sidebar-toggle><i class="fa-solid fa-bars"></i></button>
+            <div class="breadcrumb-line"><span>Workspace</span><i class="fa-solid fa-chevron-right"></i><strong>{{ request.path.strip('/').replace('-', ' ')|title or 'Dashboard' }}</strong></div>
+            <div class="topbar-actions">
+                <form class="top-search" action="{{ url_for('history.history') }}" method="GET" role="search"><input type="hidden" name="tab" value="url"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input name="q" type="search" aria-label="Search URL analysis history" placeholder="Search URL history"><span class="search-hint">/</span></form>
+                <a class="icon-button" href="{{ url_for('main.dashboard') }}#recommendations" aria-label="Security recommendations" title="Security recommendations"><i class="fa-regular fa-bell"></i></a>
+                <a class="icon-button top-profile" href="{{ url_for('auth.profile') }}" aria-label="Account profile"><span class="user-avatar">{{ current_user.username[:1]|upper }}</span></a>
+                <form method="POST" action="{{ url_for('auth.logout') }}" class="logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="icon-button" type="submit" aria-label="Sign out" title="Sign out"><i class="fa-solid fa-arrow-right-from-bracket"></i></button></form>
+            </div>
+        </header>
+{% else %}
+<div class="public-shell">
+    <header class="public-header">
+        <a class="brand-lockup" href="{{ url_for('main.index') }}"><span class="brand-mark"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span><span><strong>BASTION<span>IX</span></strong><small>SECURITY INTELLIGENCE</small></span></a>
+        <nav class="public-nav" aria-label="Account"><a href="{{ url_for('auth.login') }}">Sign in</a><a class="btn btn-cyber btn-sm" href="{{ url_for('auth.register') }}">Create account</a></nav>
+    </header>
+{% endif %}
+    <main class="{{ 'page-main' if current_user.is_authenticated else 'public-main' }}" id="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-stack" aria-live="polite">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'danger' else category }} cyber-alert alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss"></button></div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+{% if current_user.is_authenticated %}
+    <footer class="app-footer">{{ app_tagline }} <span>·</span> {{ app_name }} v{{ app_version }}</footer>
     </div>
-</nav>
-
-<div class="container-fluid px-4 py-4 flex-grow-1">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'danger' else category }} cyber-alert alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
 </div>
-
-<footer class="cyber-footer text-center py-3">
-    <div class="container-fluid">
-        <span>{{ app_tagline }} &middot; &copy; 2026 {{ app_name }} &mdash; v{{ app_version }}</span>
-    </div>
-</footer>
-
+{% else %}
+    <footer class="public-footer">{{ app_tagline }} <span>·</span> {{ app_name }} v{{ app_version }}</footer>
+</div>
+{% endif %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>

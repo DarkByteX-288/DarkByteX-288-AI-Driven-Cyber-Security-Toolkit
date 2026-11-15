@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Vulnerability Management - {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><div class="eyebrow">NETWORK / EXPOSURE MANAGEMENT</div><h1>Vulnerability management</h1><p>Review findings from scans owned by your account. Version-based matches are potential indicators, not confirmed vulnerabilities.</p></div>
+    <div class="heading-actions"><a class="btn btn-cyber-outline" href="{{ url_for('reports.vulnerability_csv') }}"><i class="fa-solid fa-file-csv"></i> Export CSV</a><a class="btn btn-cyber" href="{{ url_for('scanner_pages.network_scanner') }}"><i class="fa-solid fa-plus"></i> New authorized scan</a></div>
+</section>
+
+<section class="row g-3 mb-4" aria-label="Finding summary">
+    <div class="col-6 col-lg-3"><article class="stat-card"><span class="stat-icon icon-blue"><i class="fa-solid fa-bug"></i></span><span><span class="stat-label">Total findings</span><strong class="stat-value">{{ total_findings }}</strong></span></article></div>
+    <div class="col-6 col-lg-3"><a class="stat-card" href="{{ url_for('network_pages.vulnerabilities', severity='critical') }}"><span class="stat-icon icon-critical"><i class="fa-solid fa-triangle-exclamation"></i></span><span><span class="stat-label">Critical</span><strong class="stat-value">{{ severity_counts.get('critical', 0) }}</strong></span></a></div>
+    <div class="col-6 col-lg-3"><a class="stat-card" href="{{ url_for('network_pages.vulnerabilities', severity='high') }}"><span class="stat-icon icon-red"><i class="fa-solid fa-arrow-up"></i></span><span><span class="stat-label">High</span><strong class="stat-value">{{ severity_counts.get('high', 0) }}</strong></span></a></div>
+    <div class="col-6 col-lg-3"><article class="stat-card"><span class="stat-icon icon-orange"><i class="fa-solid fa-circle-question"></i></span><span><span class="stat-label">Potential matches</span><strong class="stat-value">{{ potential_findings }}</strong></span></article></div>
+</section>
+
+<section class="cyber-card">
+    <form method="GET" class="row g-2 align-items-end mb-4">
+        <div class="col-lg-5"><label class="form-label" for="finding-search">Search findings</label><input id="finding-search" class="form-control" type="search" name="q" value="{{ search }}" maxlength="120" placeholder="CVE, title, or description"></div>
+        <div class="col-sm-6 col-lg-3"><label class="form-label" for="finding-severity">Severity</label><select id="finding-severity" class="form-select" name="severity"><option value="">All severities</option>{% for item in ['critical','high','medium','low','informational'] %}<option value="{{ item }}" {{ 'selected' if severity == item else '' }}>{{ item|title }}</option>{% endfor %}</select></div>
+        <div class="col-sm-6 col-lg-2"><label class="form-label" for="finding-sort">Sort by</label><select id="finding-sort" class="form-select" name="sort">{% for value, label in [('recent','Newest'),('oldest','Oldest'),('severity','Severity'),('cvss','CVSS score')] %}<option value="{{ value }}" {{ 'selected' if sort_key == value else '' }}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="col-lg-2 d-grid"><button class="btn btn-cyber" type="submit"><i class="fa-solid fa-filter"></i> Apply</button></div>
+    </form>
+
+    {% if findings.items %}
+    <div class="table-responsive">
+        <table class="table table-cyber">
+            <thead><tr><th>Finding / classification</th><th>Severity</th><th>CVSS</th><th>Asset / service</th><th>Scan date</th><th>Details</th></tr></thead>
+            <tbody>{% for finding in findings.items %}
+                {% set port = finding.port %}
+                {% set host = port.host if port else none %}
+                {% set service = port.service if port else none %}
+                <tr>
+                    <td><strong>{{ finding.cve_id or finding.title }}</strong><div class="data-note">{{ finding.title }}</div><span class="status-pill {{ 'status-warning' if finding.classification == 'potential' else ('status-success' if finding.classification == 'confirmed' else 'status-info') }}">{{ finding.classification|title }}</span></td>
+                    <td><span class="status-pill severity-{{ finding.severity|lower|replace(' ', '-') }}">{{ finding.severity }}</span></td>
+                    <td>{{ '%.1f'|format(finding.cvss_score) if finding.cvss_score is not none else '—' }}{% if finding.cvss_version %}<div class="data-note">CVSS {{ finding.cvss_version }}</div>{% endif %}</td>
+                    <td><strong>{{ host.address if host else finding.scan.target }}</strong>{% if port %}<div class="data-note">TCP {{ port.port }} · {{ service.product or service.name if service else port.state }}{% if service and service.version %} {{ service.version }}{% endif %}</div>{% endif %}</td>
+                    <td>{{ finding.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td><details><summary class="btn btn-cyber-outline btn-sm">Review</summary><div class="finding-detail mt-2"><p>{{ finding.description }}</p><p><strong>Remediation:</strong> {{ finding.remediation }}</p>{% if finding.safe_references %}<p class="mb-1"><strong>References</strong></p><ul>{% for link in finding.safe_references %}<li><a href="{{ link }}" target="_blank" rel="noopener noreferrer">External advisory</a></li>{% endfor %}</ul>{% endif %}<a href="{{ url_for('scanner_pages.network_scanner', scan_id=finding.scan_id) }}">Open scan #{{ finding.scan_id }}</a></div></details></td>
+                </tr>
+            {% endfor %}</tbody>
+        </table>
+    </div>
+    <nav class="mt-4" aria-label="Findings pagination"><ul class="pagination pagination-sm justify-content-end">
+        <li class="page-item {{ 'disabled' if not findings.has_prev }}"><a class="page-link" href="{{ url_for('network_pages.vulnerabilities', page=findings.prev_num, q=search, severity=severity, sort=sort_key) if findings.has_prev else '#' }}">Previous</a></li>
+        <li class="page-item active"><span class="page-link">{{ findings.page }} / {{ findings.pages or 1 }}</span></li>
+        <li class="page-item {{ 'disabled' if not findings.has_next }}"><a class="page-link" href="{{ url_for('network_pages.vulnerabilities', page=findings.next_num, q=search, severity=severity, sort=sort_key) if findings.has_next else '#' }}">Next</a></li>
+    </ul></nav>
+    {% else %}
+    <div class="empty-state"><i class="fa-solid fa-shield"></i><h3>No matching findings</h3><p>There are no vulnerability findings for this account and filter.</p><a class="btn btn-cyber-outline" href="{{ url_for('scanner_pages.network_scanner') }}">Open network scanner</a></div>
+    {% endif %}
+</section>
+{% endblock %}

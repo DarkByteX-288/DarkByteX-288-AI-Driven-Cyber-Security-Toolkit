@@ -1,83 +1,77 @@
 {% extends "base.html" %}
 {% block title %}Settings - {{ app_name }}{% endblock %}
 {% block content %}
-
-<h3 class="mb-4"><i class="fa-solid fa-gear"></i> Settings</h3>
-
-<div class="row g-4">
-    <div class="col-lg-6">
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-palette"></i> Appearance</h6>
-            <form method="POST" action="{{ url_for('settings.update_theme') }}">
+<section class="page-heading"><div><div class="eyebrow">MANAGEMENT / WORKSPACE</div><h1>Settings</h1><p>Manage your account, appearance, notifications, and existing BastionIX tools.</p></div></section>
+<section class="row g-3">
+    <div class="col-xl-6">
+        <article class="cyber-card">
+            <div class="section-title"><h2>Account information</h2><a href="{{ url_for('auth.profile') }}">View profile</a></div>
+            <div class="metric-row"><span>Username</span><strong>{{ current_user.username }}</strong></div>
+            <div class="metric-row"><span>Email</span><strong>{{ current_user.email }}</strong></div>
+            <div class="metric-row"><span>Member since</span><strong>{{ current_user.created_at.strftime('%Y-%m-%d') }}</strong></div>
+        </article>
+        <article class="cyber-card">
+            <div class="section-title"><h2>Appearance</h2><span class="status-pill status-info">{{ user_settings.theme|title }} theme</span></div>
+            <p>Choose the workspace theme for this account.</p>
+            <form method="POST" action="{{ url_for('settings.update_theme') }}" class="d-flex flex-wrap gap-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="btn-group w-100" role="group">
-                    <button type="submit" name="theme" value="dark" class="btn {{ 'btn-cyber' if user_settings.theme == 'dark' else 'btn-cyber-outline' }}">
-                        <i class="fa-solid fa-moon"></i> Dark Mode
-                    </button>
-                    <button type="submit" name="theme" value="light" class="btn {{ 'btn-cyber' if user_settings.theme == 'light' else 'btn-cyber-outline' }}">
-                        <i class="fa-solid fa-sun"></i> Light Mode
-                    </button>
-                </div>
+                <button type="submit" name="theme" value="dark" class="btn {{ 'btn-cyber' if user_settings.theme == 'dark' else 'btn-cyber-outline' }}"><i class="fa-solid fa-moon"></i> Dark</button>
+                <button type="submit" name="theme" value="light" class="btn {{ 'btn-cyber' if user_settings.theme == 'light' else 'btn-cyber-outline' }}"><i class="fa-solid fa-sun"></i> Light</button>
             </form>
-        </div>
-
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-download"></i> Export Data</h6>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="{{ url_for('reports.password_csv') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-csv"></i> Password CSV</a>
-                <a href="{{ url_for('reports.url_csv') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-csv"></i> URL CSV</a>
-                <a href="{{ url_for('reports.security_pdf') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-pdf"></i> Security PDF</a>
-            </div>
-        </div>
-
-        <div class="cyber-card">
-            <h6 class="mb-3 text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h6>
-            <form method="POST" action="{{ url_for('settings.clear_history') }}" onsubmit="return confirm('This will permanently delete all your analysis history. Continue?');">
+        </article>
+        <article class="cyber-card">
+            <div class="section-title"><h2>Notifications</h2><span class="data-note">Email preference</span></div>
+            <p>Manage the existing account preference. Delivery behavior depends on deployment configuration.</p>
+            <form method="POST" action="{{ url_for('settings.update_notifications') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-outline-danger w-100"><i class="fa-solid fa-trash"></i> Clear My History</button>
+                <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" role="switch" id="email-notifications" name="email_notifications" {{ 'checked' if user_settings.email_notifications else '' }}><label class="form-check-label" for="email-notifications">Enable email notifications</label></div>
+                <button type="submit" class="btn btn-cyber-outline">Save preference</button>
             </form>
-        </div>
+        </article>
     </div>
-
-    <div class="col-lg-6">
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-brain"></i> AI Model Management</h6>
+    <div class="col-xl-6">
+        <article class="cyber-card">
+            <div class="section-title"><h2>Password management</h2><i class="fa-solid fa-lock text-secondary"></i></div>
+            <p>Change your account password. Your current password is required; the replacement is stored as a one-way password hash.</p>
+            <form method="POST" action="{{ url_for('settings.update_password') }}" novalidate>
+                {{ password_form.hidden_tag() }}
+                {% for field in [password_form.current_password, password_form.new_password, password_form.confirm_password] %}
+                <div class="mb-3">{{ field.label(class="form-label") }}{{ field(class="form-control", autocomplete="off") }}{% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
+                {% endfor %}
+                {{ password_form.submit(class="btn btn-cyber") }}
+            </form>
+        </article>
+        <article class="cyber-card">
+            <div class="section-title"><h2>Scanner controls</h2><span class="status-pill status-success">Enforced server-side</span></div>
+            <p>Network assessment uses the fixed safe TCP profile, explicit authorization, approved scope validation, bounded targets and ports, and authenticated owner-scoped results.</p>
+            <a class="btn btn-cyber-outline" href="{{ url_for('scanner_pages.network_scanner') }}">Open network scanner</a>
+        </article>
+        <article class="cyber-card">
+            <div class="section-title"><h2>Exports and AI models</h2><span class="data-note">Existing features</span></div>
+            <div class="d-flex flex-wrap gap-2 mb-4"><a href="{{ url_for('reports.report_center') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-lines"></i> Report center</a><a href="{{ url_for('reports.security_pdf') }}" class="btn btn-cyber-outline"><i class="fa-solid fa-file-pdf"></i> Security PDF</a></div>
             <form method="POST" action="{{ url_for('settings.retrain_models') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="mb-3">
-                    <select name="target" class="form-select">
-                        <option value="both">Both Models</option>
-                        <option value="password">Password Model Only</option>
-                        <option value="url">URL Model Only</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-cyber w-100" data-no-spinner>
-                    <i class="fa-solid fa-arrows-rotate"></i> Retrain AI Models
-                </button>
-                <small class="d-block mt-2" style="color: var(--text-secondary);">
-                    Regenerates the training dataset and retrains the RandomForest model(s). This may take a few seconds.
-                </small>
+                <label class="form-label" for="retrain-target">Model selection</label>
+                <select class="form-select mb-3" id="retrain-target" name="target"><option value="both">Both models</option><option value="password">Password model</option><option value="url">URL model</option></select>
+                <button type="submit" class="btn btn-cyber-outline" data-no-spinner><i class="fa-solid fa-arrows-rotate"></i> Retrain models</button>
             </form>
-        </div>
-
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-database"></i> Database Information</h6>
-            <table class="table table-cyber table-sm mb-0">
-                <tr><th>Engine</th><td>{{ db_info.engine }}</td></tr>
-                <tr><th>File</th><td class="text-truncate" style="max-width:220px;">{{ db_info.path }}</td></tr>
-                <tr><th>Size</th><td>{{ db_info.size_kb }} KB</td></tr>
-                <tr><th>Total Users</th><td>{{ db_info.total_users }}</td></tr>
-            </table>
-        </div>
-
-        <div class="cyber-card">
-            <h6 class="mb-3"><i class="fa-solid fa-circle-info"></i> Application Information</h6>
-            <table class="table table-cyber table-sm mb-0">
-                <tr><th>Name</th><td>{{ app_info.name }}</td></tr>
-                <tr><th>Version</th><td>{{ app_info.version }}</td></tr>
-            </table>
-        </div>
+            <p class="data-note mt-2 mb-0">Retraining uses the existing application datasets and may take a few seconds.</p>
+        </article>
+        <article class="cyber-card">
+            <div class="section-title"><h2>Application information</h2><i class="fa-solid fa-circle-info text-secondary"></i></div>
+            <div class="metric-row"><span>Application</span><strong>{{ app_info.name }}</strong></div>
+            <div class="metric-row"><span>Version</span><strong>{{ app_info.version }}</strong></div>
+            <div class="metric-row"><span>Database engine</span><strong>{{ db_info.engine }}</strong></div>
+            <p class="data-note mt-2 mb-0">Private storage paths and other users' account information are not shown.</p>
+        </article>
+        <article class="cyber-card">
+            <div class="section-title"><h2 class="text-danger">Danger zone</h2><i class="fa-solid fa-triangle-exclamation text-danger"></i></div>
+            <p>This action deletes your password and URL analysis history. Network scans are managed separately in scan history.</p>
+            <form method="POST" action="{{ url_for('settings.clear_history') }}" onsubmit="return confirm('Permanently delete your password and URL analysis history?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger"><i class="fa-solid fa-trash"></i> Clear analysis history</button>
+            </form>
+        </article>
     </div>
-</div>
-
+</section>
 {% endblock %}

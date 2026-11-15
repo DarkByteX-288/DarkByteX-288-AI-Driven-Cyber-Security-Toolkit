@@ -31,6 +31,18 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Sign In")
 
 
+class PasswordChangeForm(FlaskForm):
+    current_password = PasswordField("Current password", validators=[DataRequired()])
+    new_password = PasswordField(
+        "New password", validators=[DataRequired(), Length(min=8, max=128)]
+    )
+    confirm_password = PasswordField(
+        "Confirm new password",
+        validators=[DataRequired(), EqualTo("new_password", message="Passwords must match.")],
+    )
+    submit = SubmitField("Update password")
+
+
 class PasswordCheckForm(FlaskForm):
     password = PasswordField("Password to Analyze", validators=[DataRequired(), Length(max=256)])
     submit = SubmitField("Analyze Password")

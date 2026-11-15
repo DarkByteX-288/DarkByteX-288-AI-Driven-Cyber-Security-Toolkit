@@ -5,8 +5,6 @@ Application settings: dark/light mode, data export, history clearing,
 AI model retraining, and database/application information.
 """
 
-import os
-
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 
@@ -15,8 +13,8 @@ from models.password_analysis import PasswordAnalysis
 from models.url_analysis import URLAnalysis
 from models.attack_log import AttackLog
 from models.settings import UserSettings
-from models.user import User
 from utils.security import log_event
+from utils.forms import PasswordChangeForm
 from ml.model_loader import retrain_password_model, retrain_url_model
 
 settings_bp = Blueprint("settings", __name__)
@@ -31,22 +29,21 @@ def settings():
         db.session.add(user_settings)
         db.session.commit()
 
-    db_path = current_app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
-    db_size_kb = round(os.path.getsize(db_path) / 1024, 1) if os.path.exists(db_path) else 0
-
-    db_info = {
-        "engine": "SQLite",
-        "path": db_path,
-        "size_kb": db_size_kb,
-        "total_users": User.query.count(),
-    }
+    db_engine = current_app.config["SQLALCHEMY_DATABASE_URI"].split(":", 1)[0].upper()
+    db_info = {"engine": db_engine}
 
     app_info = {
         "name": current_app.config["APP_NAME"],
         "version": current_app.config["APP_VERSION"],
     }
 
-    return render_template("settings.html", user_settings=user_settings, db_info=db_info, app_info=app_info)
+    return render_template(
+        "settings.html",
+        user_settings=user_settings,
+        db_info=db_info,
+        app_info=app_info,
+        password_form=PasswordChangeForm(),
+    )
 
 
 @settings_bp.route("/settings/theme", methods=["POST"])
@@ -63,6 +60,51 @@ def update_theme():
     db.session.commit()
     flash(f"Theme switched to {theme} mode.", "success")
     return redirect(url_for("settings.settings"))
+
+
+@settings_bp.route("/settings/notifications", methods=["POST"])
+@login_required
+def update_notifications():
+    user_settings = current_user.settings
+    if user_settings is None:
+        user_settings = UserSettings(user_id=current_user.id, theme="dark")
+        db.session.add(user_settings)
+    user_settings.email_notifications = request.form.get("email_notifications") == "on"
+    db.session.commit()
+    flash("Notification preferences updated.", "success")
+    return redirect(url_for("settings.settings"))
+
+
+@settings_bp.route("/settings/password", methods=["POST"])
+@login_required
+def update_password():
+    form = PasswordChangeForm()
+    if form.validate_on_submit():
+        if not current_user.check_password(form.current_password.data):
+            form.current_password.errors.append("Current password is incorrect.")
+        elif form.current_password.data == form.new_password.data:
+            form.new_password.errors.append("Choose a password different from your current password.")
+        else:
+            current_user.set_password(form.new_password.data)
+            db.session.commit()
+            log_event("password_changed", "User changed account password.", user_id=current_user.id)
+            flash("Your password was updated.", "success")
+            return redirect(url_for("settings.settings"))
+    user_settings = current_user.settings
+    app_info = {
+        "name": current_app.config["APP_NAME"],
+        "version": current_app.config["APP_VERSION"],
+    }
+    db_info = {
+        "engine": current_app.config["SQLALCHEMY_DATABASE_URI"].split(":", 1)[0].upper()
+    }
+    return render_template(
+        "settings.html",
+        user_settings=user_settings,
+        db_info=db_info,
+        app_info=app_info,
+        password_form=form,
+    ), 400
 
 
 @settings_bp.route("/settings/clear-history", methods=["POST"])

@@ -1,115 +1,36 @@
 {% extends "base.html" %}
-{% block title %}History - {{ app_name }}{% endblock %}
+{% block title %}Analysis History - {{ app_name }}{% endblock %}
 {% block content %}
-
-<h3 class="mb-4"><i class="fa-solid fa-clock-rotate-left"></i> Analysis History</h3>
-
-<ul class="nav nav-tabs mb-4" style="border-color: var(--border-color);">
-    <li class="nav-item">
-        <a class="nav-link {{ 'active' if tab == 'password' else '' }}" href="{{ url_for('history.history', tab='password') }}">
-            <i class="fa-solid fa-key"></i> Password Analyses
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ 'active' if tab == 'url' else '' }}" href="{{ url_for('history.history', tab='url') }}">
-            <i class="fa-solid fa-link"></i> URL Analyses
-        </a>
-    </li>
+<section class="page-heading">
+    <div><div class="eyebrow">SECURITY / PERSONAL RECORDS</div><h1>Analysis history</h1><p>Browse your saved password-derived metrics and URL classifications. Password plaintext is never part of these records.</p></div>
+    <div class="heading-actions"><a class="btn btn-cyber-outline" href="{{ url_for('network_pages.scan_history') }}"><i class="fa-solid fa-network-wired"></i> Network scan history</a></div>
+</section>
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'password' else '' }}" href="{{ url_for('history.history', tab='password') }}"><i class="fa-solid fa-key"></i> Password assessments</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'url' else '' }}" href="{{ url_for('history.history', tab='url') }}"><i class="fa-solid fa-link"></i> URL analyses</a></li>
 </ul>
-
 {% if tab == 'password' %}
-<div class="cyber-card">
-    <form method="GET" class="row g-2 mb-3">
-        <input type="hidden" name="tab" value="password">
-        <div class="col-md-4">
-            <select name="category" class="form-select" onchange="this.form.submit()">
-                <option value="">All Categories</option>
-                {% for cat in ["Very Weak", "Weak", "Moderate", "Strong", "Very Strong"] %}
-                <option value="{{ cat }}" {{ 'selected' if category_filter == cat else '' }}>{{ cat }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-4">
-            <a href="{{ url_for('reports.password_csv') }}" class="btn btn-cyber-outline w-100"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
-        </div>
-    </form>
-
-    <div class="table-responsive">
-        <table class="table table-cyber table-sm align-middle">
-            <thead><tr><th>Date</th><th>Length</th><th>Entropy</th><th>Category</th><th>Score</th><th>Crack Time</th><th></th></tr></thead>
-            <tbody>
-                {% for a in pwd_analyses %}
-                <tr>
-                    <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>{{ a.password_length }}</td>
-                    <td>{{ a.entropy }}</td>
-                    <td>{{ a.strength_category }}</td>
-                    <td>{{ a.strength_score }}/100</td>
-                    <td>{{ a.estimated_crack_time_display or '—' }}</td>
-                    <td>
-                        <form method="POST" action="{{ url_for('history.delete_password_analysis', analysis_id=a.id) }}" onsubmit="return confirm('Delete this analysis?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="7" class="text-center" style="color: var(--text-secondary);">No password analyses found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+<section class="cyber-card">
+    <div class="section-title"><h2>Password assessment records</h2><a class="btn btn-cyber-outline btn-sm {{ 'disabled' if not password_pagination.total }}" href="{{ url_for('reports.password_csv') }}"><i class="fa-solid fa-file-csv"></i> Export CSV</a></div>
+    <form method="GET" class="row g-2 align-items-end mb-3"><input type="hidden" name="tab" value="password"><div class="col-md-5"><label class="form-label" for="password-category">Strength category</label><select class="form-select" id="password-category" name="category"><option value="">All categories</option>{% for cat in ["Very Weak", "Weak", "Moderate", "Strong", "Very Strong"] %}<option value="{{ cat }}" {{ 'selected' if category_filter == cat else '' }}>{{ cat }}</option>{% endfor %}</select></div><div class="col-md-2 d-grid"><button class="btn btn-cyber" type="submit">Filter</button></div><div class="col-md-2"><a class="btn btn-cyber-outline w-100" href="{{ url_for('history.history', tab='password') }}">Clear</a></div></form>
+    {% if pwd_analyses %}
+    <div class="table-responsive"><table class="table table-cyber"><thead><tr><th>Date</th><th>Strength</th><th>Score</th><th>Length</th><th>Entropy</th><th>Estimated effort</th><th>Details</th><th></th></tr></thead><tbody>
+    {% for item in pwd_analyses %}<tr><td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ item.strength_category }}</td><td>{{ item.strength_score|round|int }}/100</td><td>{{ item.password_length }}</td><td>{{ item.entropy }} bits</td><td>{{ item.estimated_crack_time_display or '—' }}</td><td><details><summary class="btn btn-cyber-outline btn-sm">Review</summary><ul class="mt-2">{% for rec in item.recommendations_list %}<li>{{ rec }}</li>{% else %}<li>No recommendation data.</li>{% endfor %}</ul></details></td><td><form method="POST" action="{{ url_for('history.delete_password_analysis', analysis_id=item.id) }}" onsubmit="return confirm('Delete this password assessment?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Delete password assessment {{ item.id }}"><i class="fa-solid fa-trash"></i></button></form></td></tr>{% endfor %}
+    </tbody></table></div>
+    <nav class="mt-4" aria-label="Password assessment pages"><ul class="pagination pagination-sm justify-content-end"><li class="page-item {{ 'disabled' if not password_pagination.has_prev }}"><a class="page-link" href="{{ url_for('history.history', tab='password', page=password_pagination.prev_num, category=category_filter) if password_pagination.has_prev else '#' }}">Previous</a></li><li class="page-item active"><span class="page-link">{{ password_pagination.page }} / {{ password_pagination.pages or 1 }}</span></li><li class="page-item {{ 'disabled' if not password_pagination.has_next }}"><a class="page-link" href="{{ url_for('history.history', tab='password', page=password_pagination.next_num, category=category_filter) if password_pagination.has_next else '#' }}">Next</a></li></ul></nav>
+    {% else %}<div class="empty-state"><i class="fa-solid fa-key"></i><h3>No password assessment records</h3><p>Assessments save strength, pattern, and entropy metrics—not password content.</p><a class="btn btn-cyber" href="{{ url_for('password.password_checker') }}">Assess a password</a></div>{% endif %}
+</section>
 {% endif %}
-
 {% if tab == 'url' %}
-<div class="cyber-card">
-    <form method="GET" class="row g-2 mb-3">
-        <input type="hidden" name="tab" value="url">
-        <div class="col-md-4">
-            <input type="text" name="q" class="form-control" placeholder="Search by URL..." value="{{ query }}">
-        </div>
-        <div class="col-md-3">
-            <select name="category" class="form-select">
-                <option value="">All Verdicts</option>
-                {% for v in ["Safe", "Suspicious", "Phishing", "Unknown"] %}
-                <option value="{{ v }}" {{ 'selected' if category_filter == v else '' }}>{{ v }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-cyber w-100" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Filter</button>
-        </div>
-        <div class="col-md-3">
-            <a href="{{ url_for('reports.url_csv') }}" class="btn btn-cyber-outline w-100"><i class="fa-solid fa-file-csv"></i> Export CSV</a>
-        </div>
-    </form>
-
-    <div class="table-responsive">
-        <table class="table table-cyber table-sm align-middle">
-            <thead><tr><th>Date</th><th>URL</th><th>Verdict</th><th>Confidence</th><th>Threat</th><th></th></tr></thead>
-            <tbody>
-                {% for a in url_analyses %}
-                <tr>
-                    <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td class="text-truncate" style="max-width: 260px;">{{ a.url }}</td>
-                    <td>{{ a.verdict }}</td>
-                    <td>{% if a.verdict == "Unknown" %}Unavailable{% else %}{{ a.confidence }}%{% endif %}</td>
-                    <td>{{ a.threat_level }}</td>
-                    <td>
-                        <form method="POST" action="{{ url_for('history.delete_url_analysis', analysis_id=a.id) }}" onsubmit="return confirm('Delete this analysis?');">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="6" class="text-center" style="color: var(--text-secondary);">No URL analyses found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+<section class="cyber-card">
+    <div class="section-title"><h2>URL analysis records</h2><a class="btn btn-cyber-outline btn-sm {{ 'disabled' if not url_pagination.total }}" href="{{ url_for('reports.url_csv') }}"><i class="fa-solid fa-file-csv"></i> Export CSV</a></div>
+    <form method="GET" class="row g-2 align-items-end mb-3"><input type="hidden" name="tab" value="url"><div class="col-lg-5"><label class="form-label" for="url-search">Search URL</label><input class="form-control" id="url-search" type="search" name="q" value="{{ query }}" maxlength="2048" placeholder="Search submitted URL"></div><div class="col-md-4 col-lg-3"><label class="form-label" for="url-category">Classification</label><select class="form-select" id="url-category" name="category"><option value="">All classifications</option>{% for value in ["Safe", "Suspicious", "Phishing", "Unknown"] %}<option value="{{ value }}" {{ 'selected' if category_filter == value else '' }}>{{ value }}</option>{% endfor %}</select></div><div class="col-md-2 d-grid"><button class="btn btn-cyber" type="submit">Filter</button></div><div class="col-md-2"><a class="btn btn-cyber-outline w-100" href="{{ url_for('history.history', tab='url') }}">Clear</a></div></form>
+    {% if url_analyses %}
+    <div class="table-responsive"><table class="table table-cyber"><thead><tr><th>Date</th><th>Submitted URL</th><th>Classification</th><th>Confidence</th><th>Threat</th><th></th></tr></thead><tbody>
+    {% for item in url_analyses %}<tr><td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td class="history-url">{{ item.url }}</td><td><span class="status-pill {{ 'status-danger' if item.verdict == 'Phishing' else ('status-warning' if item.verdict != 'Safe' else 'status-success') }}">{{ item.verdict }}</span></td><td>{% if item.verdict == "Unknown" %}Unavailable{% else %}{{ item.confidence }}%{% endif %}</td><td>{{ item.threat_level }}</td><td><form method="POST" action="{{ url_for('history.delete_url_analysis', analysis_id=item.id) }}" onsubmit="return confirm('Delete this URL analysis?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Delete URL analysis {{ item.id }}"><i class="fa-solid fa-trash"></i></button></form></td></tr>{% endfor %}
+    </tbody></table></div>
+    <nav class="mt-4" aria-label="URL analysis pages"><ul class="pagination pagination-sm justify-content-end"><li class="page-item {{ 'disabled' if not url_pagination.has_prev }}"><a class="page-link" href="{{ url_for('history.history', tab='url', page=url_pagination.prev_num, q=query, category=category_filter) if url_pagination.has_prev else '#' }}">Previous</a></li><li class="page-item active"><span class="page-link">{{ url_pagination.page }} / {{ url_pagination.pages or 1 }}</span></li><li class="page-item {{ 'disabled' if not url_pagination.has_next }}"><a class="page-link" href="{{ url_for('history.history', tab='url', page=url_pagination.next_num, q=query, category=category_filter) if url_pagination.has_next else '#' }}">Next</a></li></ul></nav>
+    {% else %}<div class="empty-state"><i class="fa-solid fa-link"></i><h3>No URL analysis records</h3><p>Run a URL classification to see owner-scoped results and signals here.</p><a class="btn btn-cyber" href="{{ url_for('url.url_checker') }}">Analyze a URL</a></div>{% endif %}
+</section>
 {% endif %}
-
 {% endblock %}

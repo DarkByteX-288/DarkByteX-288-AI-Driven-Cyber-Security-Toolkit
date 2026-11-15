@@ -1,64 +1,43 @@
 {% extends "base.html" %}
-{% block title %}Network Vulnerability Scanner - {{ app_name }}{% endblock %}
+{% block title %}Network Scanner - {{ app_name }}{% endblock %}
 {% block content %}
-<h3 class="mb-2"><i class="fa-solid fa-network-wired"></i> Network Vulnerability Assessment</h3>
-<p class="mb-4" style="color: var(--text-secondary);">
-    Assess only assets you are explicitly authorized to scan. Private approved ranges are enforced by the server.
-</p>
-
-<div class="row g-4">
-    <div class="col-lg-5">
-        <div class="cyber-card">
+<section class="page-heading">
+    <div><div class="eyebrow">NETWORK / AUTHORIZED ASSESSMENT</div><h1>Network vulnerability scanner</h1><p>Assess only assets you own or are explicitly authorized to scan. Scope is validated and enforced by the server before execution.</p></div>
+    <div class="heading-actions"><a class="btn btn-cyber-outline" href="{{ url_for('network_pages.scan_history') }}"><i class="fa-solid fa-clock-rotate-left"></i> Scan history</a><a class="btn btn-cyber-outline" href="{{ url_for('network_pages.vulnerabilities') }}"><i class="fa-solid fa-bug"></i> Findings</a></div>
+</section>
+<section class="row g-3">
+    <div class="col-xl-5">
+        <article class="cyber-card">
+            <div class="section-title"><h2>Assessment configuration</h2><span class="status-pill status-info">Safe profile</span></div>
             <form id="network-scan-form">
-                <div class="mb-3">
-                    <label class="form-label" for="scan-target">Authorized target</label>
-                    <input class="form-control" id="scan-target" name="target" maxlength="253"
-                           placeholder="Private IP, CIDR, or approved hostname" required>
-                    <small style="color: var(--text-secondary);">Configured private asset ranges only; max 64 hosts by default.</small>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="scan-ports">TCP ports (optional)</label>
-                    <input class="form-control" id="scan-ports" name="ports"
-                           placeholder="Default common ports; or e.g. 22,80,443">
-                    <small style="color: var(--text-secondary);">Maximum 100 unique ports. TCP only.</small>
-                </div>
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="authorization-confirmed" required>
-                    <label class="form-check-label" for="authorization-confirmed">
-                        I am authorized to assess this asset and understand this scan performs non-exploitative discovery and service identification.
-                    </label>
-                </div>
-                <button class="btn btn-cyber w-100" type="submit" data-no-spinner id="start-scan-button">
-                    <i class="fa-solid fa-play"></i> Start Safe Scan
-                </button>
+                <div class="mb-3"><label class="form-label" for="scan-target">Authorized target</label><input class="form-control" id="scan-target" name="target" maxlength="253" placeholder="Private IP, CIDR, or approved hostname" autocomplete="off" required><div class="form-text">Approved private ranges and configured authorizations are enforced server-side. Host limits apply after DNS resolution.</div></div>
+                <div class="mb-3"><label class="form-label" for="scan-ports">TCP ports (optional)</label><input class="form-control" id="scan-ports" name="ports" placeholder="Default common ports; or 22,80,443" inputmode="numeric" autocomplete="off"><div class="form-text">TCP only; maximum 100 unique ports. Leave blank for the existing safe default.</div></div>
+                <div class="scan-profile mb-3"><span class="stat-icon icon-cyan"><i class="fa-solid fa-shield"></i></span><div><strong>Safe TCP Connect</strong><small>Fixed Nmap profile · service detection · no arbitrary arguments</small></div></div>
+                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="authorization-confirmed" required><label class="form-check-label" for="authorization-confirmed">I am authorized to assess this target and understand this scan performs limited, non-exploitative discovery.</label></div>
+                <button class="btn btn-cyber w-100" type="submit" data-no-spinner id="start-scan-button"><i class="fa-solid fa-play"></i> Start authorized scan</button>
             </form>
-            <div class="alert alert-info mt-3 mb-0" role="note">
-                Nmap must be installed separately on the server. No exploitation, credential checks, stealth, or denial-of-service tests are run.
-            </div>
-        </div>
+            <div class="scanner-safety-note mt-3"><i class="fa-solid fa-circle-info"></i><span>Nmap must be installed on the server. No exploitation, credential checks, stealth options, or denial-of-service tests are run.</span></div>
+        </article>
+        <article class="cyber-card mt-3">
+            <div class="section-title mb-2"><h2>Scanner health</h2><span id="scanner-health-status" class="status-pill status-neutral">Checking availability…</span></div>
+            <p id="scanner-health-detail" class="data-note mb-0" role="status" aria-live="polite">Checking the configured scanner and Python integration.</p>
+        </article>
     </div>
-    <div class="col-lg-7">
-        <div class="cyber-card">
-            <h5>Scan progress</h5>
-            <div class="risk-meter mb-2">
-                <div id="scan-progress-bar" class="risk-meter-fill" style="width:0%;background:var(--accent-cyan);"></div>
-            </div>
-            <p id="scan-status" role="status" aria-live="polite" style="color:var(--text-secondary);">No scan selected.</p>
-            <button type="button" class="btn btn-outline-danger btn-sm" id="cancel-scan-button" hidden>Cancel scan</button>
-            <div class="d-flex gap-2 mt-3" id="scan-report-links" hidden>
-                <a class="btn btn-cyber-outline btn-sm" id="scan-csv-link">CSV report</a>
-                <a class="btn btn-cyber-outline btn-sm" id="scan-pdf-link">PDF report</a>
-            </div>
+    <div class="col-xl-7">
+        <article class="cyber-card">
+            <div class="section-title"><h2>Scan progress</h2><span id="scan-progress-label" class="data-note">No scan selected</span></div>
+            <div class="risk-meter mb-2" role="progressbar" aria-label="Scan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="scan-progress-bar" class="risk-meter-fill" style="width:0%;background:var(--accent-cyan);"></div></div>
+            <p id="scan-status" role="status" aria-live="polite" class="data-note mb-3">Select a scan or submit an authorized target.</p>
+            <div class="d-flex flex-wrap gap-2"><button type="button" class="btn btn-outline-danger btn-sm" id="cancel-scan-button" hidden><i class="fa-solid fa-ban"></i> Cancel scan</button><span id="scan-error" class="text-danger small" role="alert"></span></div>
+            <div class="d-flex gap-2 mt-3" id="scan-report-links" hidden><a class="btn btn-cyber-outline btn-sm" id="scan-csv-link">CSV report</a><a class="btn btn-cyber-outline btn-sm" id="scan-pdf-link">PDF report</a></div>
             <div id="scan-results" class="mt-4"></div>
-        </div>
-        <div class="cyber-card">
-            <h5>Recent scans</h5>
-            <ul id="scan-history" class="list-unstyled mb-0" style="color:var(--text-secondary);">
-                <li>Loading scan history...</li>
-            </ul>
-        </div>
+        </article>
+        <article class="cyber-card mt-3">
+            <div class="section-title"><h2>Recent scans</h2><a href="{{ url_for('network_pages.scan_history') }}">View all history <i class="fa-solid fa-arrow-right"></i></a></div>
+            <div class="table-responsive"><table class="table table-cyber"><thead><tr><th>Scan</th><th>Target</th><th>Status</th><th>Progress</th><th></th></tr></thead><tbody id="scan-history"><tr><td colspan="5" class="data-note">Loading scan history…</td></tr></tbody></table></div>
+        </article>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block extra_scripts %}

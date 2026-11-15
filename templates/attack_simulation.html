@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Attack Simulation - {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div><div class="eyebrow">SECURITY / PASSWORD RESILIENCE</div><h1>Password attack simulation</h1><p>Review estimated resistance scenarios from your password assessments. BastionIX estimates attack effort; it does not perform password cracking.</p></div>
+    <div class="heading-actions"><a class="btn btn-cyber" href="{{ url_for('password.password_checker') }}"><i class="fa-solid fa-key"></i> Assess a password</a></div>
+</section>
+<section class="cyber-card mb-4">
+    <div class="d-flex gap-3 align-items-start"><span class="stat-icon icon-cyan"><i class="fa-solid fa-circle-info"></i></span><div><h2 class="h6">Simulation, not an attack</h2><p class="mb-0">Estimates are produced by the existing password analysis service and stored as derived metrics only. No raw password is retained. Estimated times depend on assumptions and should not be read as a guarantee.</p></div></div>
+</section>
+<section class="cyber-card">
+    <div class="section-title"><h2>Recent simulation estimates</h2><span class="data-note">Latest 50 records</span></div>
+    {% if simulations %}
+    <div class="table-responsive"><table class="table table-cyber"><thead><tr><th>Scenario</th><th>Assessment strength</th><th>Estimated effort</th><th>Likelihood</th><th>Recorded</th></tr></thead><tbody>
+    {% for item in simulations %}{% set simulation = item.entry %}
+    <tr><td><strong>{{ simulation.attack_type.replace('_',' ')|title }}</strong><div class="data-note">Estimation only</div></td><td>{{ item.category }} · {{ item.score }}/100</td><td>{{ simulation.estimated_time_display or 'Unavailable' }}</td><td><span class="status-pill {{ 'status-danger' if simulation.success_likelihood in ['High','Very High'] else ('status-warning' if simulation.success_likelihood == 'Medium' else 'status-info') }}">{{ simulation.success_likelihood }}</span></td><td>{{ simulation.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+    {% endfor %}
+    </tbody></table></div>
+    {% else %}
+    <div class="empty-state"><i class="fa-solid fa-bolt"></i><h3>No simulation estimates yet</h3><p>Run a password assessment to record its supported dictionary, brute-force, hybrid, pattern, and keyboard-walk estimates.</p><a class="btn btn-cyber" href="{{ url_for('password.password_checker') }}">Start password assessment</a></div>
+    {% endif %}
+</section>
+{% endblock %}

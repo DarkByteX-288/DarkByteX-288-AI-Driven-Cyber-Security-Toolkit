@@ -1,40 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Register - {{ app_name }}{% endblock %}
+{% block title %}Create account - {{ app_name }}{% endblock %}
 {% block content %}
 <div class="auth-wrapper">
-    <div class="cyber-card auth-card">
-        <div class="text-center mb-4">
-            <i class="fa-solid fa-user-shield feature-icon-lg"></i>
-            <h4>Create Account</h4>
-            <p style="color: var(--text-secondary);">Create your BastionIX account</p>
-        </div>
+    <section class="cyber-card auth-card">
+        <div class="auth-intro"><span class="stat-icon icon-cyan mx-auto mb-3"><i class="fa-solid fa-user-shield"></i></span><div class="eyebrow">BASTIONIX WORKSPACE</div><h1>Create your account</h1><p>Set up a private security assessment workspace.</p></div>
         <form method="POST" novalidate>
             {{ form.hidden_tag() }}
-            <div class="mb-3">
-                {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control", placeholder="Choose a username", autofocus=true) }}
-                {% for error in form.username.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.email.label(class="form-label") }}
-                {{ form.email(class="form-control", placeholder="you@example.com") }}
-                {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control", placeholder="At least 8 characters") }}
-                {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.confirm_password.label(class="form-label") }}
-                {{ form.confirm_password(class="form-control", placeholder="Repeat password") }}
-                {% for error in form.confirm_password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
+            <div class="mb-3">{{ form.username.label(class="form-label") }}{{ form.username(class="form-control", placeholder="Choose a username", autocomplete="username", autofocus=true) }}{% for error in form.username.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
+            <div class="mb-3">{{ form.email.label(class="form-label") }}{{ form.email(class="form-control", placeholder="you@example.com", autocomplete="email") }}{% for error in form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
+            <div class="mb-3">{{ form.password.label(class="form-label") }}<div class="input-group">{{ form.password(class="form-control", placeholder="At least 8 characters", autocomplete="new-password", id="register-password") }}<button type="button" class="btn btn-cyber-outline" data-password-toggle="register-password" aria-label="Show password" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div>{% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
+            <div class="mb-4">{{ form.confirm_password.label(class="form-label") }}<div class="input-group">{{ form.confirm_password(class="form-control", placeholder="Repeat password", autocomplete="new-password", id="register-confirm-password") }}<button type="button" class="btn btn-cyber-outline" data-password-toggle="register-confirm-password" aria-label="Show confirmation password" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div>{% for error in form.confirm_password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
             {{ form.submit(class="btn btn-cyber w-100") }}
         </form>
-        <p class="text-center mt-3 mb-0" style="color: var(--text-secondary);">
-            Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
-        </p>
-    </div>
+        <p class="text-center mt-4 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+    </section>
 </div>
 {% endblock %}

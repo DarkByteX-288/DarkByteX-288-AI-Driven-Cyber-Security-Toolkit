@@ -21,8 +21,11 @@ history_bp = Blueprint("history", __name__)
 @login_required
 def history():
     tab = request.args.get("tab", "password")
+    if tab not in {"password", "url"}:
+        tab = "password"
     query = request.args.get("q", "").strip()
     category_filter = request.args.get("category", "")
+    page = max(request.args.get("page", 1, type=int), 1)
 
     pwd_query = PasswordAnalysis.query.filter_by(user_id=current_user.id)
     url_query = URLAnalysis.query.filter_by(user_id=current_user.id)
@@ -35,8 +38,14 @@ def history():
     if tab == "url" and query:
         url_query = url_query.filter(URLAnalysis.url.ilike(f"%{query}%"))
 
-    pwd_analyses = pwd_query.order_by(PasswordAnalysis.created_at.desc()).all()
-    url_analyses = url_query.order_by(URLAnalysis.created_at.desc()).all()
+    password_pagination = pwd_query.order_by(
+        PasswordAnalysis.created_at.desc()
+    ).paginate(page=page, per_page=20, error_out=False)
+    url_pagination = url_query.order_by(
+        URLAnalysis.created_at.desc()
+    ).paginate(page=page, per_page=20, error_out=False)
+    pwd_analyses = password_pagination.items
+    url_analyses = url_pagination.items
 
     # Attach parsed recommendations for display
     for a in pwd_analyses:
@@ -56,6 +65,8 @@ def history():
         tab=tab,
         query=query,
         category_filter=category_filter,
+        password_pagination=password_pagination,
+        url_pagination=url_pagination,
         pwd_analyses=pwd_analyses,
         url_analyses=url_analyses,
     )

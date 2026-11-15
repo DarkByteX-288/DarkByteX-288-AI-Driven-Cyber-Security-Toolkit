@@ -70,4 +70,12 @@ def password_checker():
         # Explicitly drop the reference; nothing else in this request holds it.
         raw_password = None  # noqa: F841
 
-    return render_template("password_checker.html", form=form, result=result)
+    recent_analyses = PasswordAnalysis.query.filter_by(user_id=current_user.id).order_by(
+        PasswordAnalysis.created_at.desc()
+    ).limit(5).all()
+    return render_template(
+        "password_checker.html",
+        form=form,
+        result=result,
+        recent_analyses=recent_analyses,
+    )

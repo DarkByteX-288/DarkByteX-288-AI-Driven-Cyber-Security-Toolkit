@@ -1,34 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Sign In - {{ app_name }}{% endblock %}
+{% block title %}Sign in - {{ app_name }}{% endblock %}
 {% block content %}
 <div class="auth-wrapper">
-    <div class="cyber-card auth-card">
-        <div class="text-center mb-4">
-            <i class="fa-solid fa-shield-halved feature-icon-lg"></i>
-            <h4>Sign In</h4>
-            <p style="color: var(--text-secondary);">Access your Cyber Security dashboard</p>
-        </div>
+    <section class="cyber-card auth-card">
+        <div class="auth-intro"><span class="stat-icon icon-blue mx-auto mb-3"><i class="fa-solid fa-shield-halved"></i></span><div class="eyebrow">BASTIONIX WORKSPACE</div><h1>Welcome back</h1><p>Sign in to your security intelligence dashboard.</p></div>
         <form method="POST" novalidate>
             {{ form.hidden_tag() }}
-            <div class="mb-3">
-                {{ form.username.label(class="form-label") }}
-                {{ form.username(class="form-control", placeholder="Username or email", autofocus=true) }}
-                {% for error in form.username.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="mb-3">
-                {{ form.password.label(class="form-label") }}
-                {{ form.password(class="form-control", placeholder="Password") }}
-                {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-            </div>
-            <div class="form-check mb-3">
-                {{ form.remember_me(class="form-check-input") }}
-                {{ form.remember_me.label(class="form-check-label") }}
-            </div>
+            <div class="mb-3">{{ form.username.label(class="form-label") }}{{ form.username(class="form-control", placeholder="Username or email", autocomplete="username", autofocus=true) }}{% for error in form.username.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
+            <div class="mb-3">{{ form.password.label(class="form-label") }}<div class="input-group">{{ form.password(class="form-control", placeholder="Enter your password", autocomplete="current-password", id="login-password") }}<button type="button" class="btn btn-cyber-outline" data-password-toggle="login-password" aria-label="Show password" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></div>{% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}</div>
+            <div class="form-check mb-4">{{ form.remember_me(class="form-check-input") }}{{ form.remember_me.label(class="form-check-label") }}</div>
             {{ form.submit(class="btn btn-cyber w-100") }}
         </form>
-        <p class="text-center mt-3 mb-0" style="color: var(--text-secondary);">
-            Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a>
-        </p>
-    </div>
+        <p class="text-center mt-4 mb-0">New to BastionIX? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+        <p class="data-note text-center mt-3 mb-0"><i class="fa-solid fa-lock"></i> Protected session · Secure password hashing</p>
+    </section>
 </div>
 {% endblock %}

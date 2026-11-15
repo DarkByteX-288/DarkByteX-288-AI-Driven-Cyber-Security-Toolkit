@@ -51,4 +51,12 @@ def url_checker():
         db.session.add(analysis)
         db.session.commit()
 
-    return render_template("url_checker.html", form=form, result=result)
+    recent_analyses = URLAnalysis.query.filter_by(user_id=current_user.id).order_by(
+        URLAnalysis.created_at.desc()
+    ).limit(5).all()
+    return render_template(
+        "url_checker.html",
+        form=form,
+        result=result,
+        recent_analyses=recent_analyses,
+    )

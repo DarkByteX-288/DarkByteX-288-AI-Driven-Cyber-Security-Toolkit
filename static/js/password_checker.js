@@ -13,9 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (toggleBtn && input) {
         toggleBtn.addEventListener("click", () => {
-            input.type = input.type === "password" ? "text" : "password";
-            toggleBtn.querySelector("i").classList.toggle("fa-eye");
-            toggleBtn.querySelector("i").classList.toggle("fa-eye-slash");
+            const visible = input.type === "password";
+            input.type = visible ? "text" : "password";
+            toggleBtn.setAttribute("aria-pressed", String(visible));
+            toggleBtn.setAttribute("aria-label", visible ? "Hide password" : "Show password");
+            toggleBtn.querySelector("i").classList.toggle("fa-eye", !visible);
+            toggleBtn.querySelector("i").classList.toggle("fa-eye-slash", visible);
         });
     }
 

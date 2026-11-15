@@ -1,21 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Profile - {{ app_name }}{% endblock %}
+{% block title %}Account Profile - {{ app_name }}{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="cyber-card">
-            <div class="text-center mb-3">
-                <i class="fa-solid fa-user-shield" style="font-size: 3rem; color: var(--accent-cyan);"></i>
-                <h4 class="mt-2">{{ user.username }}</h4>
-                <p style="color: var(--text-secondary);">{{ user.email }}</p>
-            </div>
-            <table class="table table-cyber">
-                <tr><th>Account Created</th><td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
-                <tr><th>Last Login</th><td>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M') if user.last_login_at else '—' }}</td></tr>
-                <tr><th>Password Analyses</th><td>{{ user.password_analyses.count() }}</td></tr>
-                <tr><th>URL Analyses</th><td>{{ user.url_analyses.count() }}</td></tr>
-            </table>
-        </div>
-    </div>
-</div>
+<section class="page-heading"><div><div class="eyebrow">MANAGEMENT / ACCOUNT</div><h1>Account profile</h1><p>Your account information and activity totals.</p></div><div class="heading-actions"><a class="btn btn-cyber-outline" href="{{ url_for('settings.settings') }}"><i class="fa-solid fa-sliders"></i> Settings</a></div></section>
+<section class="row justify-content-center"><div class="col-xl-8">
+    <article class="cyber-card">
+        <div class="d-flex align-items-center gap-3 mb-4"><span class="user-avatar profile-avatar">{{ user.username[:1]|upper }}</span><div><h2 class="h5 mb-1">{{ user.username }}</h2><p class="mb-0">{{ user.email }}</p></div></div>
+        <div class="row g-3 mb-4"><div class="col-sm-4"><div class="metric-panel"><span>Password assessments</span><strong>{{ user.password_analyses.count() }}</strong></div></div><div class="col-sm-4"><div class="metric-panel"><span>URL analyses</span><strong>{{ user.url_analyses.count() }}</strong></div></div><div class="col-sm-4"><div class="metric-panel"><span>Network scans</span><strong>{{ user.network_scans|length }}</strong></div></div></div>
+        <div class="metric-row"><span>Account created</span><strong>{{ user.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</strong></div>
+        <div class="metric-row"><span>Last sign-in</span><strong>{{ user.last_login_at.strftime('%Y-%m-%d %H:%M UTC') if user.last_login_at else 'Not recorded' }}</strong></div>
+        <p class="data-note mt-3 mb-0">Profile changes are not currently supported. You can update your password and workspace preferences in Settings.</p>
+    </article>
+</div></section>
 {% endblock %}

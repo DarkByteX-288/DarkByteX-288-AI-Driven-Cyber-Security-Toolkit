@@ -1,44 +1,23 @@
 {% extends "base.html" %}
-{% block title %}{{ app_name }} - Home{% endblock %}
+{% block title %}{{ app_name }} · Security intelligence{% endblock %}
 {% block content %}
-<div class="hero-section">
-    <h1 class="hero-title mb-3"><i class="fa-solid fa-shield-halved"></i> {{ app_name }}</h1>
+<section class="hero-section">
+    <div class="eyebrow">AI-POWERED CYBERSECURITY & NETWORK INTELLIGENCE</div>
+    <h1 class="hero-title"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Security with context.</h1>
     <p class="lead">{{ app_tagline }}</p>
-    <p class="lead" style="color: var(--text-secondary); max-width: 700px; margin: 0 auto;">
-        AI-driven password strength evaluation, phishing URL detection, authorized network
-        vulnerability assessment, and adaptive defense in one security platform.
-    </p>
+    <p class="hero-description">BastionIX brings password hygiene, phishing URL analysis, and authorized network assessment into one focused security workspace.</p>
     <div class="mt-4">
         {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-cyber btn-lg"><i class="fa-solid fa-gauge-high"></i> Go to Dashboard</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-cyber btn-lg"><i class="fa-solid fa-grid-2"></i> Open security overview</a>
         {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn btn-cyber btn-lg me-2"><i class="fa-solid fa-user-plus"></i> Get Started</a>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-cyber-outline btn-lg"><i class="fa-solid fa-right-to-bracket"></i> Sign In</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-cyber btn-lg me-2">Create account</a><a href="{{ url_for('auth.login') }}" class="btn btn-cyber-outline btn-lg">Sign in</a>
         {% endif %}
     </div>
-</div>
-
-<div class="row g-4 mt-2">
-    <div class="col-md-4">
-        <div class="cyber-card text-center h-100">
-            <div class="feature-icon-lg"><i class="fa-solid fa-key"></i></div>
-            <h5>Password Strength AI</h5>
-            <p style="color: var(--text-secondary);">Entropy, pattern recognition, dictionary detection, and machine-learning based scoring with actionable recommendations.</p>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="cyber-card text-center h-100">
-            <div class="feature-icon-lg"><i class="fa-solid fa-link"></i></div>
-            <h5>Phishing URL Detection</h5>
-            <p style="color: var(--text-secondary);">Structural and lexical analysis of URLs to flag suspicious or malicious links before you click.</p>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="cyber-card text-center h-100">
-            <div class="feature-icon-lg"><i class="fa-solid fa-crosshairs"></i></div>
-            <h5>Attack Simulation</h5>
-            <p style="color: var(--text-secondary);">Simulated dictionary, brute-force, hybrid, and pattern attacks estimate real-world crack times.</p>
-        </div>
-    </div>
-</div>
+</section>
+<section class="row g-3">
+    <div class="col-md-4"><article class="cyber-card h-100"><span class="stat-icon icon-blue mb-3"><i class="fa-solid fa-key"></i></span><h2 class="h5">Password security</h2><p>Assess entropy, patterns, strength, and estimated attack effort while retaining derived metrics only.</p><a href="{{ url_for('password.password_checker') }}">Explore password security <i class="fa-solid fa-arrow-right"></i></a></article></div>
+    <div class="col-md-4"><article class="cyber-card h-100"><span class="stat-icon icon-cyan mb-3"><i class="fa-solid fa-link"></i></span><h2 class="h5">Phishing detection</h2><p>Review URL structure and supported intelligence indicators without opening the submitted address.</p><a href="{{ url_for('url.url_checker') }}">Explore URL analysis <i class="fa-solid fa-arrow-right"></i></a></article></div>
+    <div class="col-md-4"><article class="cyber-card h-100"><span class="stat-icon icon-orange mb-3"><i class="fa-solid fa-network-wired"></i></span><h2 class="h5">Authorized network scans</h2><p>Run a bounded TCP Connect assessment with strict target validation and owner-scoped results.</p><a href="{{ url_for('scanner_pages.network_scanner') }}">Explore network security <i class="fa-solid fa-arrow-right"></i></a></article></div>
+</section>
+<section class="public-trust-note mt-4"><i class="fa-solid fa-lock"></i><span>Assess only assets you own or are explicitly authorized to test. BastionIX findings and model scores are decision support, not a substitute for a complete security audit.</span></section>
 {% endblock %}
